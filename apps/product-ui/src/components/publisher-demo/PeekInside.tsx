@@ -1,0 +1,75 @@
+"use client";
+import {Ld} from '@axp/design-system/ledger';
+import {candidateFor, money, moneyUnit, type LiveTrace, type Retrieval, type Turn} from './model';
+import type {ReactNode} from 'react';
+
+function Step({number, title, state, children}: {number: number; title: string; state: string; children: ReactNode}) {
+  return <li id={`publisher-flow-step-${number}`} className="pub-flow-step"><span className="pub-flow-number" aria-hidden>{number}</span><div className="pub-flow-step-body"><div className="pub-between"><h4>{title}</h4><Ld.Tag tone={state === 'Complete' || state === 'Accepted' ? 'success' : state === 'Failed' ? 'warning' : 'outline'}>{state}</Ld.Tag></div>{children}</div></li>;
+}
+function PublicEvidence({retrieval}: {retrieval: Retrieval}) {
+  const observed = retrieval.examples ?? retrieval.observedExamples ?? [];
+  const inferred = retrieval.hints ?? retrieval.inferredHints ?? [];
+  return <div className="pub-stack"><div className="pub-flow-meta"><Ld.Tag tone={retrieval.historyStatus === 'ready' ? 'ch' : 'outline'}>{retrieval.historyStatus === 'ready' ? 'Historical evidence available' : 'Historical evidence unavailable'}</Ld.Tag><span>{retrieval.method || 'No retrieval method reported'}</span></div><p className="ld-caption">{retrieval.exampleCount ?? observed.length} observed examples · {retrieval.hintCount ?? inferred.length} inferred hints. Associations are supporting evidence, not verified product capabilities or measured conversion probabilities.</p>{observed.length ? <details className="pub-details"><summary>Observed associations</summary>{observed.map((e, i) => <blockquote key={String(e.id ?? i)}><Ld.Tag tone="ch">Observed</Ld.Tag><p>{e.text || e.prompt || 'See raw record for the observed association.'}</p><span className="ld-mono">{e.id || `Record ${i + 1}`}</span></blockquote>)}</details> : null}{inferred.length ? <details className="pub-details"><summary>Inferred historical hints</summary>{inferred.map((e, i) => <blockquote key={String(e.id ?? i)}><Ld.Tag tone="ch">Inferred</Ld.Tag><p>{e.text || e.hint || 'See raw record for the inferred hint.'}</p><span className="ld-mono">{e.id || `Record ${i + 1}`}</span></blockquote>)}</details> : null}</div>;
+}
+
+export function PeekInside({turn, number, financialMode}: {turn?: Turn; number?: number; financialMode?: string}) {
+  if (!turn) return <Ld.Panel title="Peek inside" sub="Open a turn to inspect the complete live flow."><div className="pub-stack"><div className="pub-parallel"><div><span className="ld-label">Organic lane</span><p>Question → DeepSeek → independent answer</p></div><div><span className="ld-label">Sponsored lane</span><p>Eligibility → evidence → Jev → auction → card → receipt</p></div></div><p className="ld-caption">The two requests start together. Only recorded results advance these stages; no simulated progress or preselected winner.</p></div></Ld.Panel>;
+  const trace = turn.ad?.trace as LiveTrace | undefined;
+  const candidates = trace?.candidates ?? [];
+  const decisions = trace?.decisions ?? [];
+  const bids = trace?.bids ?? [];
+  const award = turn.ad?.status === 'awarded' ? turn.ad.award : undefined;
+  const budget = turn.budgetAfterDelivery ?? turn.budgetAfterAward;
+  const unit = moneyUnit(turn.ad?.mode ?? budget?.mode ?? financialMode);
+  const winnerBudget = award && budget?.campaigns.find(c => c.id === award.campaignId);
+  const adComplete = !!turn.ad;
+  const disabled = turn.adState === 'disabled';
+  const label = (campaignId?: string) => {const c = candidates.find(c => c.campaignId === campaignId); return c?.brandName || c?.name || budget?.campaigns.find(c => c.id === campaignId)?.brandName || campaignId || 'Campaign';};
+  const eligibleCount = candidates.filter(c => c.eligible).length;
+  return <Ld.Panel id="publisher-peek" title="Peek inside" sub={`Turn ${number ?? ''} · actual request and delivery records`}>
+    <div className="pub-stack">
+      <details className="pub-details"><summary>Question and request identity</summary><p className="pub-peek-question">{turn.input.question}</p><pre>{JSON.stringify(turn.input, null, 2)}</pre></details>
+      <div className="pub-organic-lane"><div className="pub-between"><h3 className="ld-card-title">Organic answer</h3><Ld.Tag tone={turn.answer ? 'success' : turn.answerError ? 'warning' : 'outline'}>{turn.answer ? 'Complete' : turn.answerError ? 'Failed' : 'In progress'}</Ld.Tag></div><p className="ld-secondary">{turn.answer ? `${turn.answer.model || 'DeepSeek'} generated a fresh answer from the question alone.` : turn.answerError ? `Provider error: ${turn.answerError}` : 'DeepSeek request started independently of the ad request.'}</p><p className="ld-caption">No creative, advertiser hint, historical evidence or bid context is supplied. An ad failure cannot block this request.</p>{turn.answerReceivedAt ? <span className="ld-caption">Received {new Date(turn.answerReceivedAt).toLocaleTimeString()} in this browser.</span> : null}{turn.answer?.trace ? <details className="pub-details"><summary>Organic request evidence</summary><pre>{JSON.stringify(turn.answer.trace, null, 2)}</pre></details> : null}</div>
+      <div className="pub-between"><h3 className="ld-card-title">Sponsored lane</h3><Ld.Tag>{trace?.engine || 'Jev'}</Ld.Tag></div>
+      <nav className="pub-stage-nav" aria-label="Jump to a recorded flow stage">{['Eligibility', 'Evidence', 'Jev', 'Auction', 'DOM', 'Receipt', 'Budget'].map((name, i) => <a key={name} href={`#publisher-flow-step-${i + 1}`} onClick={event => {
+        const target = document.getElementById(`publisher-flow-step-${i + 1}`); if (!target) return;
+        event.preventDefault();
+        const body = target.closest<HTMLElement>('.ld-panel-body');
+        if (body && body.scrollHeight > body.clientHeight + 1) body.scrollTo({top: body.scrollTop + target.getBoundingClientRect().top - body.getBoundingClientRect().top - 16, behavior: 'auto'});
+        else target.scrollIntoView({block: 'start', behavior: 'auto'});
+      }}>{name}</a>)}</nav>
+      <ol className="pub-flow">
+        <Step number={1} title="Context and hard eligibility" state={disabled ? 'Disabled' : adComplete ? 'Complete' : turn.adError ? 'Failed' : 'Waiting'}>
+          {trace?.context ? <div className="pub-facts"><span>Intent</span><b>{trace.context.coarseIntent}</b><span>Required capabilities</span><b>{trace.context.taskConstraints?.join(', ') || 'None explicitly required'}</b><span>Soft preferences</span><b>{trace.context.softPreferences?.join(', ') || 'None recorded'}</b><span>Placement floor</span><b>{money(trace.context.floorBaseUnits)} {unit}</b></div> : <p>{disabled ? 'No ad opportunity requested.' : turn.adError ? `Ad request error: ${turn.adError}` : 'Phase records arrive when the ad request completes.'}</p>}
+          {candidates.length ? <><p className="ld-caption">{eligibleCount} of {candidates.length} campaigns eligible before model judgment.</p><div className="pub-candidates">{candidates.map(c => <div key={c.campaignId}><div className="pub-between"><b>{c.brandName || c.name || c.campaignId}</b><Ld.Tag tone={c.eligible ? 'success' : 'outline'}>{c.eligible ? 'Eligible' : 'Excluded'}</Ld.Tag></div><p>{c.eligible ? 'Declared capabilities and deterministic policy permit evaluation.' : c.reason || 'Policy excluded'}</p></div>)}</div></> : adComplete ? <p>No candidate campaign records were returned.</p> : null}
+        </Step>
+        <Step number={2} title="Advertiser hints and historical evidence" state={disabled ? 'Skipped' : adComplete ? 'Complete' : 'Waiting'}>
+          {candidates.filter(c => c.eligible).map(c => <details className="pub-details" key={c.campaignId}><summary>{c.brandName || c.name || c.campaignId}: advertiser context</summary><Ld.Tag>Advertiser declared</Ld.Tag>{(c.advertiserContextHints ?? c.contextHints ?? []).map((hint, i) => <p key={i}>{hint}</p>)}<p className="ld-caption">Declared capabilities: {c.declaredCapabilities?.join(', ') || 'See raw record'}. Hints describe desired conversational situations; they cannot add undeclared capabilities.</p></details>)}
+          {decisions.map((d, i) => d.engineProvenance?.retrieval ? <div className="pub-evidence-summary" key={d.campaignVersionId ?? i}><b>{candidateFor(d, candidates)?.brandName || d.campaignVersionId || 'Buyer'}: retrieval</b><PublicEvidence retrieval={d.engineProvenance.retrieval} /></div> : null)}
+          {adComplete && !decisions.length ? <p>No eligible buyer needed evidence retrieval or a model judgment.</p> : !adComplete ? <p>Advertiser declarations and available ContextHint evidence enter only the buying lane.</p> : null}
+        </Step>
+        <Step number={3} title="Jev buying judgment" state={disabled ? 'Skipped' : adComplete ? decisions.length ? 'Complete' : 'Skipped' : 'Waiting'}>
+          {decisions.map((d, i) => <div className="pub-decision" key={d.campaignVersionId ?? i}><div className="pub-between"><b>{candidateFor(d, candidates)?.brandName || d.campaignVersionId || 'Buyer'}</b><Ld.Tag tone={d.decision === 'bid' ? 'brand' : 'outline'}>{d.decision}</Ld.Tag></div><div className="pub-facts"><span>Model</span><b>{d.engineProvenance?.model ?? trace?.engine}</b><span>Execution</span><b>{d.engineProvenance?.execution || 'Not reported'}</b><span>Relevance rubric</span><b>{d.relevanceLevel === null || d.relevanceLevel === undefined ? 'Unavailable' : `${d.relevanceLevel} / 3`}</b><span>Commercial intent</span><b>{d.commercialIntentLevel === null || d.commercialIntentLevel === undefined ? 'Unavailable' : `${d.commercialIntentLevel} / 3`}</b></div><p className="ld-caption">{d.reasonCodes?.join(', ')}{d.engineProvenance?.elapsedMs !== undefined ? ` · ${Math.round(d.engineProvenance.elapsedMs)} ms recorded buyer time` : ''}</p></div>)}
+          <p className="ld-caption">Jev proposes fit, participation and an approved creative. Its rubric scores are not conversion probabilities and it cannot authorize money.</p>
+        </Step>
+        <Step number={4} title="Code-owned bids and first-price auction" state={disabled ? 'Skipped' : adComplete ? 'Complete' : 'Waiting'}>
+          {bids.length ? <div className="pub-bids">{bids.map(b => <div key={b.campaignId} data-winner={b.campaignId === award?.campaignId || undefined}><span>{label(b.campaignId)}</span><b>{money(b.amountBaseUnits)} {unit}</b><span className="ld-caption">{b.campaignId === award?.campaignId ? 'Winner' : 'No charge'}</span></div>)}</div> : <p>{adComplete ? 'No admitted bid. No award or reservation.' : 'Integer bid policy and cap checks run after valid judgments.'}</p>}
+          {award ? <p>{label(award.campaignId)} wins at its exact bid of <b>{money(award.priceBaseUnits)} {unit}</b>. Its budget is reserved until accepted delivery, failure or expiry.</p> : null}
+          {trace?.rejections?.length ? <details className="pub-details"><summary>{trace.rejections.length} exclusion or no-bid reasons</summary>{trace.rejections.map((r, i) => <p key={i}><b>{label(r.campaignId)}</b>: {r.reason}</p>)}</details> : null}
+          <p className="ld-caption">Code maps fit/intent to integer bid bands, bounds by max bid and remaining budget, enforces the placement floor, and breaks ties by campaign ID. No financial calculation runs in this browser.</p>
+        </Step>
+        <Step number={5} title="Native card and exact DOM observation" state={turn.answerError && award ? 'Skipped' : !award ? adComplete || disabled ? 'Skipped' : 'Waiting' : turn.domObservation?.domInserted && turn.domObservation.sponsoredLabelPresent ? 'Complete' : turn.renderError ? 'Failed' : 'Waiting'}>
+          {award ? <>{turn.answerError ? <p>Card omitted because the organic answer failed. {turn.awardRelease === 'released' ? 'Reservation released.' : turn.awardRelease === 'error' ? 'Reservation release could not be confirmed; server expiry remains active.' : 'Reservation release in progress.'}</p> : !turn.answer ? <p>Award held until the independent organic answer arrives.</p> : null}<div className="pub-facts"><span>Connected, exact approved copy</span><b>{turn.domObservation?.domInserted ? 'Observed' : 'Not observed'}</b><span>Sponsored disclosure</span><b>{turn.domObservation?.sponsoredLabelPresent ? 'Observed' : 'Not observed'}</b></div><details className="pub-details"><summary>Award and creative binding</summary><pre>{JSON.stringify({awardId: award.id, creativeHash: award.creativeHash, expiresAt: award.expiresAt, observation: turn.domObservation}, null, 2)}</pre></details></> : <p>No awarded card is inserted.</p>}
+        </Step>
+        <Step number={6} title="Signed receipt and one accepted charge" state={turn.receipt ? 'Accepted' : turn.answerError && award ? 'Skipped' : turn.renderError ? 'Failed' : !award && (adComplete || disabled) ? 'Skipped' : 'Waiting'}>
+          {turn.receipt ? <><p>{turn.receipt.replayed ? 'The exchange returned the existing charge again.' : 'The exchange accepted this app observation and created one charge.'}</p><div className="pub-facts"><span>Accepted amount</span><b>{money(turn.receipt.charge.amountBaseUnits)} {unit}</b><span>Charge status</span><b>{String(turn.receipt.charge.status || 'Accepted')}</b></div><details className="pub-details"><summary>Receipt, signature and charge records</summary><pre>{JSON.stringify(turn.receipt, null, 2)}</pre></details></> : <p>{turn.renderError ? `Delivery unconfirmed: ${turn.renderError}` : 'Fetching an award or placing a bid does not create spend.'}</p>}
+          <p className="ld-caption">The signature authenticates the app’s insertion and disclosure assertion. It does not prove human attention or conversion.</p>
+        </Step>
+        <Step number={7} title="Campaign budget and money states" state={budget ? 'Complete' : adComplete ? 'Unavailable' : 'Waiting'}>
+          {winnerBudget ? <><p className="ld-caption">{winnerBudget.brandName}: server snapshot fetched after {turn.budgetAfterDelivery ? turn.awardRelease ? 'reservation release' : 'delivery acknowledgement' : 'award response'}. Financial mode: {budget?.mode}.</p><div className="pub-money-grid">{[['Deposit', winnerBudget.depositBaseUnits], ['Reserved', winnerBudget.reservedBaseUnits], ['Accrued', winnerBudget.spendBaseUnits], ['Authorized', winnerBudget.authorizedBaseUnits], ['Settled', winnerBudget.settledBaseUnits], ['Remaining cap', winnerBudget.remainingBaseUnits]].map(([name, amount]) => <div key={name}><span>{name}</span><b>{money(amount)}</b><span>{unit}</span></div>)}</div><p className="ld-caption">Channel: {winnerBudget.channelStatus}. Deposit is collateral, reserved is an obligation, accrued is accepted spend, authorized is cumulative payment authority, and settled requires its own payment evidence.</p></> : <p>{budget ? 'No winning campaign to accrue spend on this turn.' : turn.budgetError ? `Budget snapshot unavailable: ${turn.budgetError}` : 'Budget records appear after the exchange response.'}</p>}
+        </Step>
+      </ol>
+      <details className="pub-details"><summary>Raw exchange trace</summary><pre>{JSON.stringify(trace ?? {status: turn.adState, error: turn.adError}, null, 2)}</pre></details>
+    </div>
+  </Ld.Panel>;
+}
