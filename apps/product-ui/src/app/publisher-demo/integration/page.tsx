@@ -63,7 +63,7 @@ AXP_EXCHANGE_URL=http://127.0.0.1:3430/api/product \\
   node packages/publisher-sdk/examples/server.mjs
 # Open http://127.0.0.1:3433, create a campaign in the dashboard,
 # and ask a matching question. DeepSeek must be configured.
-# Sends invoke DeepSeek and may invoke Jev for ad requests.`}</pre><p>The developer example provides separate answer and ad routes, a native browser renderer, server-only authentication, stable turn IDs, an independent DeepSeek answer and receipt forwarding. The judge-facing app is the integrated publisher chat, with the complete “Peek inside” flow.</p><Ld.Button href="/publisher-demo" Link={Link}>Open the live publisher chat →</Ld.Button></Ld.Panel>
+# Sends invoke DeepSeek and may invoke Jev for ad requests.`}</pre><p>The developer example provides separate answer and ad routes, a native browser renderer, server-only authentication, stable turn IDs, an independent DeepSeek answer and receipt forwarding. The judge-facing app is the integrated publisher chat, with the complete “View internals” flow.</p><Ld.Button href="/publisher-demo" Link={Link}>Open the live publisher chat →</Ld.Button></Ld.Panel>
       <p>Integration research: Gravity’s official <a href="https://docs.trygravity.ai/ai-platforms/quickstart" target="_blank" rel="noopener noreferrer">parallel server request and render quickstart</a> informed this lifecycle. AXP uses its own exchange and receipt contracts.</p>
     </div>
   </main></div>;

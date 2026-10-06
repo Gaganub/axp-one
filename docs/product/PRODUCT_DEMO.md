@@ -124,7 +124,7 @@ changes frequency scope, not campaign spend or daily provider caps.
    fresh turn. The independent DeepSeek answer and complete Jev buying/auction/
    delivery path execute separately. Show the actual `deepseek-flash` answer when
    it arrives, the separate Sponsored card if awarded, and accepted delivery.
-8. Open **Peek inside**. Inspect actual candidate eligibility, advertiser hints,
+8. Open **View internals**. Inspect actual candidate eligibility, advertiser hints,
    retrieved evidence or its unavailability, Jev decisions, bid policy, auction,
    award reservation, exact insertion acknowledgement and accepted receipt/charge.
    The question and suggested bids do not force HarborKey to win. If there is
@@ -159,7 +159,7 @@ another workspace will not authenticate this inventory. It requests the same use
 inventory through the reusable SDK. The example forwards an independent question to the live DeepSeek answer endpoint
 on the product server and requests ads through the SDK in parallel. It requires
 configured DeepSeek and holds an award until the answer arrives. Use the main
-publisher chat for the full Peek inside judge flow. SDK ad requests can invoke
+publisher chat for the full View internals judge flow. SDK ad requests can invoke
 configured Jev. The SDK's purpose
 here is to show server request, native card rendering and exact receipt forwarding
 without changing an app's independent organic model path.
@@ -303,7 +303,7 @@ are for unfunded synthetic rehearsals.
    draining/settlement pending, then show finalized publisher payout and unused
    deposit return, transaction signatures, finality and token deltas. Inspect SOL
    fee/rent evidence separately from Test USDC charges. In the chat, select
-   **Refresh payment records** in Peek to read the newly finalized payout/refund
+   **Refresh payment records** in the Payment stage to read the newly finalized payout/refund
    without another question, model request or signing operation.
 5. An unsigned opening blocker can expose **Retry saved channel opening**. It
    refetches current state and reuses the same campaign; it never retries signed

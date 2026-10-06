@@ -42,7 +42,7 @@ remain separate read-only evidence.
 3. If an eligible active dashboard campaign wins, see its separate Sponsored card.
    Open its HTTPS destination optionally; no click is required for delivery.
 4. See a clear no-fill when inventory, policy, frequency or budget prevents an award.
-   Open “Peek inside” to inspect eligibility, observed/inferred evidence, actual buyer engine, decisions, campaign hints,
+   Open “View internals” to inspect eligibility, observed/inferred evidence, actual buyer engine, decisions, campaign hints,
    exclusions and deadlines. Real Jev decisions and the reported financial mode
    are independent labels; one never implies the other.
 5. Continue asking questions in the same session to exercise frequency limits.
@@ -58,7 +58,7 @@ remain separate read-only evidence.
 | DeepSeek fails after a send | Honest organic error, independent ad result | No automatic organic call replay; a new submission is a new turn |
 | No campaign matches | Answer plus concise no-fill state | No card, receipt or charge |
 | Creative or disclosure differs | Card delivery is not acknowledged | Explicit render failure; preserve organic answer |
-| Receipt request is uncertain | Card remains, delivery status says unconfirmed | Retry the same award/token/observation; server returns the original accepted result |
+| Receipt request is uncertain | Card remains; internals shows unconfirmed delivery | Retry the same award/token/observation; server returns the original accepted result |
 | Award expires before acknowledgement | Delivery is rejected; no success claim | No replacement purchase on that turn |
 | App omits or cannot render an award | Organic answer remains | Explicit fail releases reservation, otherwise server expiry does |
 | Browser refresh | New turns use the existing random conversation session | No automatic replay or new purchase |
@@ -74,12 +74,12 @@ When using synthetic mode, this workflow uses test credits and does not establis
 payment network activity. Devnet mode is a separate, explicitly selected workspace.
 
 In a Devnet workspace, the advertiser dashboard opens a channel with actual test
-USDC. Peek shows the finalized deposit transaction independently of the auction.
+USDC. The Payment stage shows the finalized deposit transaction independently of the auction.
 Accepted delivery creates one charge and the backend authorizes its cumulative
 off-chain voucher. The publisher browser never signs, selects a recipient or sends
 a transfer. Unknown or blocked authorization is shown as accepted but unpaid and
 requiring reconciliation. After the advertiser settles and closes the channel,
-select “Refresh payment records” in Peek to read the finalized payout/close evidence,
+select “Refresh payment records” in the Payment stage to read the finalized payout/close evidence,
 publisher/treasury/payer token deltas, refund, fees and reclaimed rent. This refresh
 does not invoke Jev, DeepSeek or the payment signer. Submitted or uncertain
 transactions do not count as finalized proof. Synthetic workspaces continue to use
@@ -129,3 +129,20 @@ The developer lifecycle is informed by Gravity's official
 2026-10-07. These establish the useful parallel server request and native disclosed
 rendering pattern. AXP's API, exact render receipts, explicit retry identities and
 financial accounting are its own implementation. No Gravity code or pixel is used.
+
+## Conversation-first interface
+
+The public view is a quiet chat: a user question, the fresh independent answer,
+a separate Sponsored card and a **View internals** button below it. Settings are
+optional and open separately. The inspector never opens automatically on a new
+submission. No receipt, budget, engine telemetry or setup panels occupy the chat.
+
+The judge opens a focus-contained dialog with two independent visual request lanes.
+Five selectable stages show one set of evidence at a time: Context, Buyers, Auction,
+Delivery and Payment. The auction starts selected and compares exact admitted bids
+on a shared zero-based scale, with the winner highlighted and the floor marked.
+Buyer context, ContextHint evidence, raw records, hashes and voucher details expand
+on demand. Payment preserves the distinction between accepted spend, authorization
+and finalized payout/refund. Refresh is read-only; receipt replay stays bound to the
+same award. Arrow keys select stages; Escape closes the view and restores focus.
+The composer retains editable Tab autofill and Enter submission.
