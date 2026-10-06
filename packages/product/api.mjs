@@ -23,7 +23,7 @@ export function createProductAPI({service}) {
       const path=new URL(req.url,'http://local').pathname.replace(/^\/api\/product/,'').replace(/\/$/,'')||'/';
       let value;
       if(req.method==='GET') {
-        if(path==='/bootstrap')value={csrf,mode:'synthetic',financialMode:'synthetic',engine:service.engine(),demo:service.demo(),capabilities:CAPABILITIES,presets:PRESETS,limits:LIMITS};
+        if(path==='/bootstrap')value={csrf,mode:service.financialMode,financialMode:service.financialMode,payments:service.payments(),engine:service.engine(),demo:service.demo(),capabilities:CAPABILITIES,presets:PRESETS,limits:service.limits};
         else if(path==='/state')value=service.state();
         else if(path==='/publisher/config')value=service.publisherConfig();
         else throw new ContractError('not_found',undefined,404);
@@ -36,14 +36,14 @@ export function createProductAPI({service}) {
         else if(path==='/opportunities'||path==='/demo/chat')value=await service.opportunity(body);
         else if(path==='/demo/answer')value=await service.answer(body);
         else {
-          const campaign=path.match(/^\/campaigns\/([-\w]+)\/(approve|launch|pause|resume|duplicate|settle|preview)$/);
+          const campaign=path.match(/^\/campaigns\/([-\w]+)\/(approve|launch|pause|resume|duplicate|settle|preview|authorize|reconcile)$/);
           const award=path.match(/^\/(?:demo\/)?awards\/([-\w]+)\/(render|fail)$/);
           if(campaign){
             const [,id,action]=campaign;
             if(action==='preview')value=service.preview(id,body);
             else {if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length)throw new ContractError('empty_body_required');
-              value=action==='approve'?service.approve(id):action==='launch'?service.launch(id):service.campaignAction(id,action);}
-          } else if(award){const [,id,action]=award;value=action==='render'?service.render(id,body,req.headers['x-axp-delivery-token']):service.failAward(id,body,req.headers['x-axp-delivery-token']);}
+              value=action==='approve'?service.approve(id):action==='launch'?await service.launch(id):await service.campaignAction(id,action);}
+          } else if(award){const [,id,action]=award;value=action==='render'?await service.render(id,body,req.headers['x-axp-delivery-token']):service.failAward(id,body,req.headers['x-axp-delivery-token']);}
           else throw new ContractError('not_found',undefined,404);
         }
       } else throw new ContractError('method_not_allowed',undefined,405);

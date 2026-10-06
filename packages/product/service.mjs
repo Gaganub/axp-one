@@ -5,6 +5,8 @@ import {Exchange} from '../exchange/index.mjs';
 import {ContractError,strictObject,hash,baseUnits,computeBid,signReceipt} from '../contracts/index.mjs';
 import {createProductDecisions} from './decisions.mjs';
 import {createProductOrganic,PRODUCT_ORGANIC_MODEL} from './organic.mjs';
+import {createProductPayments} from './payments.mjs';
+import {NATIVE_LIMITS} from './native.mjs';
 
 export const CAPABILITIES=Object.freeze([
  ['crypto_storage','Crypto custody','Store cryptocurrency and manage private keys.'],
@@ -66,8 +68,8 @@ export function taskContext(question,required=[]){
 }
 
 /** One persisted local demo workspace. Financial authority remains in Exchange.
- * These are synthetic test credits, never advertiser-held real funds. */
-export function createProductService({stateDir='local-state/product',runId='product-workspace-v1',now=Date.now,publisherKey,apiKey,transport,retriever,organicApiKey,organicTransport,dailyModelCap=50,demoMode=false}={}){
+ * Synthetic by default; opt-in Devnet uses one server-held disposable demo sponsor. */
+export function createProductService({stateDir='local-state/product',runId='product-workspace-v1',now=Date.now,publisherKey,apiKey,transport,retriever,organicApiKey,organicTransport,dailyModelCap=50,demoMode=false,financialMode='synthetic',signingEnabled=false,walletPath,paymentOptions={}}={}){
  mkdirSync(stateDir,{recursive:true,mode:0o700});
  const secretFile=join(stateDir,'publisher-api-key');
  if(!publisherKey){if(!existsSync(secretFile))writeFileSync(secretFile,randomBytes(32).toString('hex'),{mode:0o600,flag:'wx'});publisherKey=readFileSync(secretFile,'utf8').trim();}
@@ -75,17 +77,22 @@ export function createProductService({stateDir='local-state/product',runId='prod
  if(!existsSync(keyFile))writeFileSync(keyFile,generateKeyPairSync('ed25519').privateKey.export({format:'pem',type:'pkcs8'}),{mode:0o600,flag:'wx'});
  const receiptKey=createPrivateKey(readFileSync(keyFile));
  const publisherId='axp-demo-publisher',publisherKeyId='product-publisher-v1';
- const exchange=new Exchange({dbPath:join(stateDir,'exchange.sqlite'),runId,mode:'synthetic',now});
+ if(!['synthetic','devnet'].includes(financialMode))fail('financial_mode_invalid');
+ let payments;
+ const exchange=new Exchange({dbPath:join(stateDir,'exchange.sqlite'),runId,mode:financialMode,now,...(financialMode==='devnet'?{networkState:id=>payments?.projection(id)??null}:{})});
+ if(financialMode==='devnet')payments=createProductPayments({exchange,stateDir,walletPath,signingEnabled,now,...paymentOptions});
+ const payee=payments?.identities.payee??'synthetic:axp-demo-publisher';
+ const limits=financialMode==='devnet'?{...LIMITS,maxBidBaseUnits:NATIVE_LIMITS.maxBidBaseUnits,maxBudgetBaseUnits:NATIVE_LIMITS.maxBudgetBaseUnits,maxDepositBaseUnits:NATIVE_LIMITS.maxDepositBaseUnits}:LIMITS;
  for(const table of ['product_accounts','product_advertisers','product_campaigns','product_requests','product_answers'])exchange.db.exec(`CREATE TABLE IF NOT EXISTS ${table}(run TEXT NOT NULL,id TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY(run,id))`);
  const buyers=createProductDecisions({exchange,apiKey,transport,retriever,now,dailyCap:dailyModelCap});
  const inFlight=new Map(),answerFlight=new Map();
- exchange.registerPublisher({publisherId,publisherKeyId,payee:'synthetic:axp-demo-publisher',publicKeyPEM:createPublicKey(receiptKey).export({format:'pem',type:'spki'})});
+ exchange.registerPublisher({publisherId,publisherKeyId,payee,publicKeyPEM:createPublicKey(receiptKey).export({format:'pem',type:'spki'})});
  const tokenFor=awardId=>createHmac('sha256',publisherKey).update(`${runId}:${awardId}`).digest('hex');
  const stamp=()=>new Date(now()).toISOString();
  const organicStatus=()=>({ready:Boolean(organicApiKey?.trim()||organicTransport),execution:organicTransport?'fixture':organicApiKey?.trim()?'actual-api-model':'unavailable',model:PRODUCT_ORGANIC_MODEL,reason:organicApiKey?.trim()||organicTransport?null:'organic_key_unavailable',dailyCap:20,usedToday:exchange.all('product_answers').filter(r=>r.day===stamp().slice(0,10)).length});
  const account=()=>exchange.get('product_accounts','workspace');
  const requireCampaign=campaignId=>exchange.require('product_campaigns',id(campaignId));
- function saveAccount(body){strictObject(body,['name','websiteURL'],['name','websiteURL']);const a={id:'workspace',name:text(body.name,120),websiteURL:website(body.websiteURL),mode:'synthetic',updatedAt:stamp()};exchange.tx(()=>exchange.put('product_accounts','workspace',a));return {account:a};}
+ function saveAccount(body){strictObject(body,['name','websiteURL'],['name','websiteURL']);const a={id:'workspace',name:text(body.name,120),websiteURL:website(body.websiteURL),mode:financialMode,updatedAt:stamp()};exchange.tx(()=>exchange.put('product_accounts','workspace',a));return {account:a};}
  function saveCampaign(body){
   strictObject(body,['id',...fields]);
   const old=body.id?requireCampaign(body.id):null;if(old&&old.status!=='draft')fail('launched_campaign_immutable',409);
@@ -96,7 +103,7 @@ export function createProductService({stateDir='local-state/product',runId='prod
   if(c.productDescription.length+c.approvedText.length+c.contextHints.join(' ').length>2400)fail('campaign_text_limit');
   if(/[\w.+-]+@[\w.-]+\.[a-z]{2,}|apikey_[a-z0-9_]+|-----BEGIN .*PRIVATE KEY/iu.test([c.productDescription,c.approvedText,...c.contextHints].join(' ')))fail('private_content');
   c.approved=false;c.approvedContentHash=null;
-  for(const k of ['maxBidBaseUnits','budgetCapBaseUnits','depositBaseUnits']){const n=baseUnits(c[k]);if(n>BigInt(k==='maxBidBaseUnits'?LIMITS.maxBidBaseUnits:LIMITS.maxBudgetBaseUnits))fail('spend_limit_exceeded');}
+  for(const k of ['maxBidBaseUnits','budgetCapBaseUnits','depositBaseUnits']){const n=baseUnits(c[k]);if(n>BigInt(k==='maxBidBaseUnits'?limits.maxBidBaseUnits:k==='depositBaseUnits'?(limits.maxDepositBaseUnits??limits.maxBudgetBaseUnits):limits.maxBudgetBaseUnits))fail('spend_limit_exceeded');}
   c.advertiserId=c.brandName&&c.websiteURL?`advertiser-${hash([c.brandName.toLowerCase(),new URL(c.websiteURL).origin]).slice(0,24)}`:null;
   exchange.tx(()=>exchange.put('product_campaigns',c.id,c));return {campaign:campaignView(c)};
  }
@@ -110,30 +117,48 @@ export function createProductService({stateDir='local-state/product',runId='prod
  function asExchangeCampaign(c){return {campaignId:c.id,campaignVersionId:`${c.id}-v1`,advertiserId:c.advertiserId??'workspace',status:'active',allowedIntents:['product_tools'],destination:'global',declaredConstraints:c.declaredCapabilities,creatives:[{creativeVersionId:`creative-${c.id}-v1`,approvedText:c.approvedText,destinationURL:c.websiteURL,fictional:true,softFitTags:c.declaredCapabilities,evidenceFieldIds:['declaredConstraints']}],softFitTags:c.declaredCapabilities,maxBidBaseUnits:c.maxBidBaseUnits,budgetCapBaseUnits:c.budgetCapBaseUnits,channelId:`${c.id}-channel`,policyVersion:'fit_intent_bid_v1'};}
  const contentHash=c=>hash(Object.fromEntries(fields.map(k=>[k,c[k]])));
  function approve(campaignId){const c=requireCampaign(campaignId);if(c.status!=='draft')fail('launched_campaign_immutable',409);validateLaunch(c);c.approved=true;c.approvedContentHash=contentHash(c);c.updatedAt=stamp();exchange.tx(()=>exchange.put('product_campaigns',c.id,c));return {campaign:campaignView(c)};}
- function launch(campaignId){const c=requireCampaign(campaignId);if(c.status!=='draft')return {campaign:campaignView(c),replayed:true};validateLaunch(c);
+ function launch(campaignId){if(payments)return launchNative(campaignId);const c=requireCampaign(campaignId);if(c.status!=='draft')return {campaign:campaignView(c),replayed:true};validateLaunch(c);
   if(!c.approved||c.approvedContentHash!==contentHash(c))fail('campaign_approval_required',409);
   if(exchange.all('campaigns').filter(c=>c.status==='active').length>=8)fail('active_campaign_limit',409);
   const item=asExchangeCampaign(c);
-  exchange.createChannel({channelId:item.channelId,advertiserId:item.advertiserId,publisherId,payee:'synthetic:axp-demo-publisher',depositBaseUnits:c.depositBaseUnits,mode:'synthetic'});
+  exchange.createChannel({channelId:item.channelId,advertiserId:item.advertiserId,publisherId,payee,depositBaseUnits:c.depositBaseUnits,mode:financialMode});
   exchange.createCampaign(item);c.status='active';c.updatedAt=stamp();exchange.tx(()=>{exchange.put('product_campaigns',c.id,c);if(c.advertiserId&&!exchange.get('product_advertisers',c.advertiserId))exchange.put('product_advertisers',c.advertiserId,{id:c.advertiserId,brandName:c.brandName,websiteURL:c.websiteURL,workspaceId:'workspace',createdAt:stamp()});});return {campaign:campaignView(c),replayed:false};
  }
- function campaignAction(campaignId,action){const c=requireCampaign(campaignId),item=exchange.get('campaigns',c.id);
+ function updateNativeCampaign(c,result){const item=exchange.get('campaigns',c.id),payment=item?payments.evidence(item.channelId):null;
+  c.status=payment?.closeStatus==='finalized'?'settled':payment?.closeStatus?'settling':payment?.openStatus==='finalized'?(payment?.phase==='draining'?'settling':item?.status==='paused'?'paused':'active'):'opening';c.paymentError=result?.status==='blocked'?result.reason??result.reasonCode:null;c.updatedAt=stamp();exchange.tx(()=>exchange.put('product_campaigns',c.id,c));return {campaign:campaignView(c),paymentOperation:result};
+ }
+ async function launchNative(campaignId){const c=requireCampaign(campaignId);if(!['draft','opening'].includes(c.status))return {campaign:campaignView(c),replayed:true};validateLaunch(c);
+  if(!c.approved||c.approvedContentHash!==contentHash(c))fail('campaign_approval_required',409);
+  if(!payments.status().ready)fail('devnet_signing_disabled',409);
+  if(!exchange.get('campaigns',c.id)){if(exchange.all('campaigns').filter(c=>c.status==='active').length>=8)fail('active_campaign_limit',409);const item=asExchangeCampaign(c);exchange.createChannel({channelId:item.channelId,advertiserId:item.advertiserId,publisherId,payee,depositBaseUnits:c.depositBaseUnits,mode:financialMode});exchange.createCampaign(item);c.status='opening';exchange.tx(()=>{exchange.put('product_campaigns',c.id,c);if(!exchange.get('product_advertisers',c.advertiserId))exchange.put('product_advertisers',c.advertiserId,{id:c.advertiserId,brandName:c.brandName,websiteURL:c.websiteURL,workspaceId:'workspace',createdAt:stamp()});});}
+  const item=exchange.require('campaigns',c.id),frozen=await payments.freeze(item);if(frozen.status==='blocked')return updateNativeCampaign(c,frozen);return updateNativeCampaign(c,await payments.open(item.channelId));
+ }
+ async function nativeAction(campaignId,action){const c=requireCampaign(campaignId),item=exchange.require('campaigns',c.id);exchange.expireAwards();
+  if(action==='reconcile')return updateNativeCampaign(c,await payments.reconcile(item.channelId));
+  if(action==='authorize')return updateNativeCampaign(c,await payments.authorize(item.channelId));
+  if(action==='settle'){if(c.status==='settled')return {campaign:campaignView(c),replayed:true};exchange.pauseCampaign(c.id);exchange.drainNetworkChannel(item.channelId);c.status='settling';exchange.tx(()=>exchange.put('product_campaigns',c.id,c));const drained=await payments.drain(item.channelId);if(drained.status==='blocked')return updateNativeCampaign(c,drained);if(exchange.totals({channelId:item.channelId}).reserved>0n)return updateNativeCampaign(c,{status:'blocked',reason:'outstanding_deliveries'});const auth=await payments.authorize(item.channelId);if(auth.status!=='authorized')return updateNativeCampaign(c,auth);return updateNativeCampaign(c,await payments.close(item.channelId));}
+  fail('unknown_action');
+ }
+ function campaignAction(campaignId,action){if(payments&&['settle','authorize','reconcile'].includes(action))return nativeAction(campaignId,action);const c=requireCampaign(campaignId),item=exchange.get('campaigns',c.id);
   if(action==='duplicate'){const copy=Object.fromEntries(fields.map(k=>[k,c[k]]));return saveCampaign({...copy,name:`${c.name} copy`.slice(0,120)});}
   if(!item)fail('campaign_not_launched',409);
   if(action==='pause'){if(c.status==='settled')fail('channel_closed',409);exchange.pauseCampaign(c.id);c.status='paused';}
-  else if(action==='resume'){if(exchange.require('channels',item.channelId).status!=='open')fail('channel_closed',409);if(exchange.all('campaigns').filter(c=>c.status==='active').length>=8)fail('active_campaign_limit',409);exchange.createCampaign({...item,status:'active',campaignVersionId:`${c.id}-${randomUUID()}`});c.status='active';}
+  else if(action==='resume'){if(payments&&c.status!=='paused')fail('campaign_not_paused',409);if(exchange.require('channels',item.channelId).status!=='open')fail('channel_closed',409);if(exchange.all('campaigns').filter(c=>c.status==='active').length>=8)fail('active_campaign_limit',409);if(payments){if(payments.projection(item.channelId)?.reconciliationRequired)fail('payment_reconciliation_required',409);exchange.tx(()=>exchange.put('campaigns',c.id,{...item,status:'active'}));}else exchange.createCampaign({...item,status:'active',campaignVersionId:`${c.id}-${randomUUID()}`});c.status='active';}
   else if(action==='settle'){exchange.expireAwards();exchange.authorizeSynthetic(item.channelId);exchange.closeSynthetic(item.channelId);c.status='settled';}
   else fail('unknown_action');c.updatedAt=stamp();exchange.tx(()=>exchange.put('product_campaigns',c.id,c));return {campaign:campaignView(c)};
  }
  function campaignView(c){const item=exchange.get('campaigns',c.id),totals=item?exchange.totals({campaignId:c.id}):{accepted:0n,reserved:0n},channel=item?exchange.require('channels',item.channelId):null;
-  return {...c,deliveryCount:exchange.all('charges').filter(x=>x.campaignId===c.id).length,spendBaseUnits:String(totals.accepted),acceptedBaseUnits:String(totals.accepted),reservedBaseUnits:String(totals.reserved),remainingBaseUnits:String(baseUnits(c.budgetCapBaseUnits)-totals.accepted-totals.reserved),authorizedBaseUnits:channel?.authorizedBaseUnits??'0',settledBaseUnits:channel?.settledBaseUnits??'0',refundBaseUnits:channel?.refundBaseUnits??'0',channelStatus:channel?.status??'not_opened',fundingMode:'synthetic_test_credits'};
+  const payment=item&&payments?payments.evidence(item.channelId):null;
+  const status=payment?.closeStatus==='finalized'?'settled':payment?.closeStatus?'settling':payment?.openStatus==='finalized'&&c.status==='opening'?'active':c.status;
+  return {...c,status,...(payment?{payment,financialMode}:{} ),deliveryCount:exchange.all('charges').filter(x=>x.campaignId===c.id).length,spendBaseUnits:String(totals.accepted),acceptedBaseUnits:String(totals.accepted),reservedBaseUnits:String(totals.reserved),remainingBaseUnits:String(baseUnits(c.budgetCapBaseUnits)-totals.accepted-totals.reserved),authorizedBaseUnits:channel?.authorizedBaseUnits??'0',settledBaseUnits:channel?.settledBaseUnits??'0',refundBaseUnits:channel?.refundBaseUnits??'0',channelStatus:channel?.status??'not_opened',fundingMode:payments?'devnet_test_usdc':'synthetic_test_credits'};
  }
  function preview(campaignId,body){strictObject(body,['question'],['question']);const question=text(body.question,1200),draft=requireCampaign(campaignId),c=asExchangeCampaign(draft),context=taskContext(question),o={...context,id:'preview-only',publisherId,coarseIntent:context.coarseIntent,destination:'global',floorBaseUnits:'1000'};
   const missing=o.taskConstraints.filter(k=>!c.declaredConstraints.includes(k));
   const reason=missing.length?'missing_constraint':o.coarseIntent!=='product_tools'?'policy_excluded':null;
-  return {eligible:!reason,reason,creative:{brandName:draft.brandName,text:draft.approvedText,websiteURL:draft.websiteURL},matchedHints:draft.contextHints.filter(h=>[...tokens(h)].some(t=>tokens(question).has(t))),question,previewOnly:true,providerCalls:0,mode:'synthetic',engine:buyers.status(),decision:null,explanation:'Checks declared eligibility and previews copy. Jev has not judged this preview; it does not predict a bid or win.'};
+  return {eligible:!reason,reason,creative:{brandName:draft.brandName,text:draft.approvedText,websiteURL:draft.websiteURL},matchedHints:draft.contextHints.filter(h=>[...tokens(h)].some(t=>tokens(question).has(t))),question,previewOnly:true,providerCalls:0,mode:financialMode,engine:buyers.status(),decision:null,explanation:'Checks declared eligibility and previews copy. Jev has not judged this preview; it does not predict a bid or win.'};
  }
  async function runOpportunity(body){
+  if(payments)for(const c of exchange.all('channels'))payments.sync(c.channelId);
   const startedAt=now();
   strictObject(body,['question','sessionId','turnId','placementId','requiredCapabilities','excludedCategories'],['question','sessionId','turnId']);
   const question=text(body.question,1200);id(body.sessionId);id(body.turnId);
@@ -152,20 +177,22 @@ export function createProductService({stateDir='local-state/product',runId='prod
   const decisionsAt=now();
   const outcome=exchange.runAuction(o.id,decisions),award=outcome.award;
   const candidateViews=exchange.all('campaigns').map(c=>{const d=requireCampaign(c.campaignId),reason=candidates.excluded.find(x=>x.campaignId===c.campaignId)?.reason??(blockedCampaigns.some(blocked=>blocked.campaignId===c.campaignId)?'publisher_category_blocked':null);return {campaignId:c.campaignId,campaignVersionId:c.campaignVersionId,name:d.name,brandName:d.brandName,declaredCapabilities:c.declaredConstraints,advertiserContextHints:d.contextHints,eligible:!reason,reason};});
-  const result={status:outcome.status==='awarded'?'awarded':'no_fill',mode:'synthetic',opportunityId:o.id,...(award?{award:{...award,renderTokenHash:undefined,brandName:requireCampaign(award.campaignId).brandName},deliveryToken:tokenFor(award.id)}:{}),trace:{engine:'jev-1.13.0',execution:buyers.status().execution,context:{coarseIntent:o.coarseIntent,taskConstraints:o.taskConstraints,softPreferences:o.softPreferences,floorBaseUnits:o.floorBaseUnits,expiresAt:o.expiresAt},candidates:candidateViews,timings:{eligibilityMs:eligibilityAt-startedAt,decisionsMs:decisionsAt-eligibilityAt,auctionMs:now()-decisionsAt,totalMs:now()-startedAt},bids:outcome.bids,rejections:[...outcome.rejections,...blockedCampaigns.map(c=>({campaignId:c.campaignId,reason:'publisher_category_blocked'}))],decisions},replayed:false};
+  const result={status:outcome.status==='awarded'?'awarded':'no_fill',financialMode,mode:financialMode,opportunityId:o.id,...(award?{award:{...award,renderTokenHash:undefined,brandName:requireCampaign(award.campaignId).brandName},deliveryToken:tokenFor(award.id)}:{}),trace:{...(payments&&award?{payment:payments.evidence(award.channelId)}:{}),engine:'jev-1.13.0',execution:buyers.status().execution,context:{coarseIntent:o.coarseIntent,taskConstraints:o.taskConstraints,softPreferences:o.softPreferences,floorBaseUnits:o.floorBaseUnits,expiresAt:o.expiresAt},candidates:candidateViews,timings:{eligibilityMs:eligibilityAt-startedAt,decisionsMs:decisionsAt-eligibilityAt,auctionMs:now()-decisionsAt,totalMs:now()-startedAt},bids:outcome.bids,rejections:[...outcome.rejections,...blockedCampaigns.map(c=>({campaignId:c.campaignId,reason:'publisher_category_blocked'}))],decisions},replayed:false};
   // Undefined is deliberately omitted before canonical storage.
   if(result.award)delete result.award.renderTokenHash;
   exchange.tx(()=>exchange.put('product_requests',key,{inputHash:hash(normalized),input:normalized,result}));return result;
  }
  function opportunity(body){const k=hash([body.sessionId,body.turnId]),inputHash=hash(body),pending=inFlight.get(k);if(pending){if(pending.inputHash!==inputHash)return Promise.reject(new ContractError('turn_conflict',undefined,409));return pending.promise;}const promise=runOpportunity(body).finally(()=>inFlight.delete(k));inFlight.set(k,{inputHash,promise});return promise;}
- function render(awardId,body,token){id(awardId);strictObject(body,['creativeHash','domInserted','sponsoredLabelPresent'],['creativeHash','domInserted','sponsoredLabelPresent']);
+ function render(awardId,body,token){if(payments)return renderNative(awardId,body,token);return acceptRender(awardId,body,token);}
+ function acceptRender(awardId,body,token){id(awardId);strictObject(body,['creativeHash','domInserted','sponsoredLabelPresent'],['creativeHash','domInserted','sponsoredLabelPresent']);
   if(!secretMatches(token,tokenFor(awardId)))fail('delivery_token_invalid',403);
   const award=exchange.require('awards',awardId);
   if(body.creativeHash!==award.creativeHash||body.domInserted!==true||body.sponsoredLabelPresent!==true)fail('render_ack_invalid');
-  const receipt={schemaVersion:'publisher-receipt.v1',runId,mode:'synthetic',publisherId,publisherKeyId,awardId,opportunityId:award.opportunityId,creativeHash:award.creativeHash,nonce:`render-${awardId}`,renderAcknowledgementHash:hash({awardId,creativeHash:award.creativeHash,domInserted:true,sponsoredLabelPresent:true})},signature=signReceipt(receipt,receiptKey);
-  const result=exchange.acceptDelivery({receipt,signature});exchange.authorizeSynthetic(award.channelId);
-  return {status:'accepted',receipt,signature,receiptHash:hash(receipt),charge:exchange.require('charges',result.charge.id),replayed:result.replayed};
+  const receipt={schemaVersion:'publisher-receipt.v1',runId,mode:financialMode,publisherId,publisherKeyId,awardId,opportunityId:award.opportunityId,creativeHash:award.creativeHash,nonce:`render-${awardId}`,renderAcknowledgementHash:hash({awardId,creativeHash:award.creativeHash,domInserted:true,sponsoredLabelPresent:true})},signature=signReceipt(receipt,receiptKey);
+  const result=exchange.acceptDelivery({receipt,signature});if(!payments)exchange.authorizeSynthetic(award.channelId);
+  return {status:'accepted',financialMode,receipt,signature,receiptHash:hash(receipt),charge:exchange.require('charges',result.charge.id),replayed:result.replayed};
  }
+ async function renderNative(awardId,body,token){const result=acceptRender(awardId,body,token),channelId=result.charge.channelId,authorization=await payments.authorize(channelId);return {...result,charge:exchange.require('charges',result.charge.id),authorization,payment:payments.evidence(channelId)};}
  function failAward(awardId,body,token){strictObject(body,['reason']);if(!secretMatches(token,tokenFor(id(awardId))))fail('delivery_token_invalid',403);if(body.reason!==undefined)text(body.reason,120);return {award:exchange.failAward(awardId),status:'failed'};}
  async function runAnswer(body){strictObject(body,['question','sessionId','turnId'],['question']);const question=text(body.question,1200);
   if(/[\w.+-]+@[\w.-]+\.[a-z]{2,}|apikey_[a-z0-9_]+|-----BEGIN .*PRIVATE KEY/iu.test(question))fail('private_content');
@@ -185,10 +212,11 @@ export function createProductService({stateDir='local-state/product',runId='prod
   }catch(e){row.status='failed';row.reason=e.code??'organic_provider_failed';exchange.tx(()=>exchange.put('product_answers',k,row));throw new ContractError(row.reason,row.reason,502);}
  }
  function answer(body){const k=body.sessionId&&body.turnId?hash([body.sessionId,body.turnId]):randomUUID(),inputHash=hash(body),pending=answerFlight.get(k);if(pending){if(pending.inputHash!==inputHash)return Promise.reject(new ContractError('turn_conflict',undefined,409));return pending.promise;}const promise=runAnswer(body).finally(()=>answerFlight.delete(k));answerFlight.set(k,{inputHash,promise});return promise;}
- function state(){exchange.expireAwards();const report=exchange.report(),campaigns=exchange.all('product_campaigns').map(campaignView),sum=k=>String(campaigns.reduce((n,c)=>n+baseUnits(c[k]),0n));
+ function state(){exchange.expireAwards();if(payments)for(const c of exchange.all('channels'))payments.sync(c.channelId);const report=exchange.report(),campaigns=exchange.all('product_campaigns').map(campaignView),sum=k=>String(campaigns.reduce((n,c)=>n+baseUnits(c[k]),0n));
   const deliveries=report.charges.map(c=>({...c,createdAt:new Date(c.acceptedAt).toISOString(),brandName:requireCampaign(c.campaignId).brandName,campaignName:requireCampaign(c.campaignId).name,receipt:exchange.get('receipt_records',c.id)}));
   const events=report.events.map(e=>{const award=report.awards.find(a=>a.id===e.data.awardId),charge=report.charges.find(c=>c.id===e.data.chargeId),channel=report.channels.find(c=>c.channelId===e.data.channelId);return {...e,createdAt:new Date(e.at).toISOString(),campaignId:e.data.campaignId??report.campaigns.find(c=>c.campaignVersionId===e.data.decision?.campaignVersionId)?.campaignId??award?.campaignId??charge?.campaignId??report.campaigns.find(c=>c.channelId===channel?.channelId)?.campaignId??null};});
-  return {schemaVersion:'axp.product-state.v1',mode:'synthetic',engine:buyers.status(),account:account(),advertisers:exchange.all('product_advertisers'),campaigns,drafts:campaigns.filter(c=>c.status==='draft'),summary:{campaignCount:campaigns.length,activeCount:campaigns.filter(c=>c.status==='active').length,deliveryCount:deliveries.length,spendBaseUnits:sum('spendBaseUnits'),reservedBaseUnits:sum('reservedBaseUnits'),authorizedBaseUnits:sum('authorizedBaseUnits'),settledBaseUnits:sum('settledBaseUnits'),remainingBaseUnits:sum('remainingBaseUnits'),refundBaseUnits:sum('refundBaseUnits')},deliveries,events,publisher:{publisherId,publicKeyPEM:exchange.require('publishers',publisherId).publicKeyPEM},limitations:['One local demo workspace; no multi-tenant account authentication.','Synthetic test credits; no real funding or blockchain settlement.','Live Jev judges supplied declarations; historical support may be unavailable for a category.','Signed receipts assert app insertion and Sponsored disclosure, not human attention.']};
+  return {schemaVersion:'axp.product-state.v1',financialMode,mode:financialMode,payments:paymentStatus(),engine:buyers.status(),account:account(),advertisers:exchange.all('product_advertisers'),campaigns,drafts:campaigns.filter(c=>c.status==='draft'),summary:{campaignCount:campaigns.length,activeCount:campaigns.filter(c=>c.status==='active').length,deliveryCount:deliveries.length,spendBaseUnits:sum('spendBaseUnits'),reservedBaseUnits:sum('reservedBaseUnits'),authorizedBaseUnits:sum('authorizedBaseUnits'),settledBaseUnits:sum('settledBaseUnits'),remainingBaseUnits:sum('remainingBaseUnits'),refundBaseUnits:sum('refundBaseUnits')},deliveries,events,publisher:{publisherId,publicKeyPEM:exchange.require('publishers',publisherId).publicKeyPEM},limitations:['One local demo workspace; no multi-tenant account authentication.',payments?'Devnet test USDC channels funded by one server-held demo sponsor; no mainnet or independent advertiser wallet custody.':'Synthetic test credits; no real funding or blockchain settlement.','Live Jev judges supplied declarations; historical support may be unavailable for a category.','Signed receipts assert app insertion and Sponsored disclosure, not human attention.']};
  }
- return {exchange,saveAccount,saveCampaign,approve,launch,campaignAction,preview,opportunity,render,failAward,answer,state,engine:buyers.status,organic:organicStatus,demo:()=>({enabled:demoMode,seededAdvertiserCount:exchange.all('product_advertisers').filter(a=>['ClearVault','KeyArc','ColdNest'].includes(a.brandName)).length,advertiserSuggestion:DEMO_ADVERTISER}),authenticate:key=>secretMatches(key,publisherKey),publisherConfig:()=>({publisherId,mode:'synthetic',financialMode:'synthetic',placementId:'chat-sponsored-card',keyConfigured:true,apiBasePath:'/api/product',engine:buyers.status(),organic:organicStatus(),answerMode:organicStatus().execution,quickstartCommand:'npm run demo:product',capabilities:CAPABILITIES,sampleQuestions:demoMode?[PRESETS[1].exampleQuestion,...PRESETS.filter(p=>p.id!=='wallet').map(p=>p.exampleQuestion)]:PRESETS.map(p=>p.exampleQuestion)}),close:()=>exchange.close()};
+ const paymentStatus=()=>payments?.status()??{mode:'synthetic',ready:true,signingEnabled:false};
+ return {exchange,financialMode,limits,payments:paymentStatus,paymentWorker:payments,saveAccount,saveCampaign,approve,launch,campaignAction,preview,opportunity,render,failAward,answer,state,engine:buyers.status,organic:organicStatus,demo:()=>({enabled:demoMode,seededAdvertiserCount:exchange.all('product_advertisers').filter(a=>['ClearVault','KeyArc','ColdNest'].includes(a.brandName)).length,advertiserSuggestion:DEMO_ADVERTISER}),authenticate:key=>secretMatches(key,publisherKey),publisherConfig:()=>({publisherId,mode:financialMode,financialMode,payments:paymentStatus(),placementId:'chat-sponsored-card',keyConfigured:true,apiBasePath:'/api/product',engine:buyers.status(),organic:organicStatus(),answerMode:organicStatus().execution,quickstartCommand:'npm run demo:product',capabilities:CAPABILITIES,sampleQuestions:demoMode?[PRESETS[1].exampleQuestion,...PRESETS.filter(p=>p.id!=='wallet').map(p=>p.exampleQuestion)]:PRESETS.map(p=>p.exampleQuestion)}),close:()=>{payments?.dispose();exchange.close();}};
 }

@@ -22,3 +22,7 @@
 .pub-footer{display:flex;justify-content:flex-end;margin-top:24px;font-size:12px}.pub-footer a{color:var(--ld-text-2);text-decoration:none}.pub-footer a:hover{color:var(--ld-accent)}
 @media(max-width:980px){.pub-aside{grid-template-columns:minmax(0,1fr)}.pub-peek>.ld-panel>.ld-panel-body{max-height:none}.pub-provider-setup{align-items:flex-start;flex-direction:column}.pub-flow-step-body{gap:12px}}
 @media(prefers-reduced-motion:reduce){.pub-demo *{scroll-behavior:auto;transition:none!important}}
+
+.pub-native-payment {border-top: 1px solid var(--ld-border); padding-top: 20px;}
+.pub-payment-fact {display: contents;}
+.pub-native-payment .ld-mono {overflow-wrap: anywhere;}

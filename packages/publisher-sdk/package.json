@@ -7,6 +7,7 @@
   "exports": {
     ".": { "types": "./index.d.mts", "import": "./index.mjs" },
     "./browser": { "types": "./browser.d.mts", "import": "./browser.mjs" },
+    "./financial": { "types": "./financial.d.mts", "import": "./financial.mjs" },
     "./react": "./react.tsx"
   },
   "engines": { "node": ">=22.18.0" }

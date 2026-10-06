@@ -55,3 +55,79 @@ test('backend-provided advertiser suggestions supply exact money and offer value
   assert.equal(missingDemoValues(0, {}, suggestion).brandName, 'Backend fixture brand');
   assert.equal(missingDemoValues(3, {}, suggestion).maxBidBaseUnits, '0.001234');
 });
+
+import { nativePayments, currencyUnit, launchNotice, paymentActions, paymentPhase, transactionURL } from './payment.ts';
+
+test('native financial labels require explicit financial metadata independently of model execution', () => {
+  assert.equal(nativePayments({mode: 'synthetic', engine: {execution: 'actual-api-model'}}), false);
+  assert.equal(nativePayments({financialMode: 'devnet'}), true);
+  assert.equal(nativePayments({financialMode: 'devnet'}, {financialMode: 'synthetic'}), false);
+  assert.equal(currencyUnit(true), 'Test USDC');
+  assert.equal(currencyUnit(false), 'test credits');
+});
+
+test('opening or uncertain launch never claims a funded active campaign', () => {
+  const campaign = {...blankDraft(), id:'c', status:'opening', payment:{phase:'pending_open'}};
+  assert.match(launchNotice(campaign, true), /Opening channel/);
+  assert.doesNotMatch(launchNotice(campaign, true), /ready to compete/);
+  assert.match(launchNotice({...campaign, status:'active', payment:{phase:'open'}}, true), /ready to compete/);
+  assert.equal(paymentPhase({...campaign, payment:{phase:'open', reconciliationRequired:true}}), 'uncertain');
+});
+
+test('native recovery actions use accepted ledger gaps and block advancement until uncertainty resolves', () => {
+  const campaign = {...blankDraft(), id:'c', status:'active', acceptedBaseUnits:'3000', authorizedBaseUnits:'2000', payment:{phase:'open', canSettle:true, canReconcile:true}};
+  assert.deepEqual(paymentActions(campaign), {closed:false, pending:false, uncertain:false, authorize:true, settle:true, reconcile:true});
+  for (const phase of ['pending_open','closing','finalized','unknown']) {
+    const actions = paymentActions({...campaign, payment:{...campaign.payment, phase}});
+    assert.equal(actions.authorize, false);
+    assert.equal(actions.settle, false);
+  }
+  const unknown = paymentActions({...campaign, payment:{...campaign.payment, reconciliationRequired:true}});
+  assert.equal(unknown.reconcile, true);
+  assert.equal(unknown.authorize, false);
+  assert.equal(unknown.settle, false);
+  assert.equal(paymentActions({...campaign, authorizedBaseUnits:'3000'}).authorize, false);
+  assert.equal(paymentActions({...campaign, acceptedBaseUnits:'invalid'}).authorize, false);
+  assert.equal(paymentActions({...campaign, payment:{phase:'open'}}).settle, false);
+});
+
+test('Devnet transaction links remain pinned to the correct network and reject untrusted URLs', () => {
+  const signature = '5'.repeat(88);
+  assert.equal(transactionURL(signature), `https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+  for (const value of ['javascript:alert(1)', 'https://malicious.example', '0'.repeat(88), undefined]) assert.equal(transactionURL(value), null);
+});
+
+import { canRetryOpening } from './payment.ts';
+
+test('explicit opening retries require a saved unsigned campaign and never replace an uncertain identity', () => {
+  const campaign = {...blankDraft(), id:'saved-campaign', status:'opening'};
+  assert.equal(canRetryOpening(campaign), true); // pre-freeze blocker, no native store yet
+  const prepared = {...campaign, payment:{phase:'pending_open', openStatus:'prepared', canRetryOpen:true}};
+  assert.equal(canRetryOpening(prepared), true);
+  assert.equal(canRetryOpening({...prepared, payment:{...prepared.payment, canRetryOpen:false}}), false);
+  assert.equal(canRetryOpening({...prepared, payment:{...prepared.payment, reconciliationRequired:true}}), false);
+  assert.equal(canRetryOpening({...prepared, payment:{...prepared.payment, transactions:[{operation:'open',status:'prepared',signature:'saved-signature'}]}}), false);
+  for (const status of ['draft','active','paused','settled']) assert.equal(canRetryOpening({...prepared, status}), false);
+  for (const openStatus of ['signing','sign_unknown','signed_persisted','submitting','submitted','unknown','finalized','failed']) assert.equal(canRetryOpening({...prepared, payment:{...prepared.payment, openStatus}}), false);
+  assert.equal(canRetryOpening({...prepared, payment:{...prepared.payment, phase:'uncertain'}}), false);
+});
+
+import { financialModeLabel, nativeSettlementLabel } from './payment.ts';
+
+test('unresolved bootstrap never presents the workspace as synthetic', () => {
+  assert.equal(financialModeLabel(null), 'Connecting payments…');
+  assert.equal(financialModeLabel(undefined, {financialMode:'devnet'}), 'Connecting payments…');
+  assert.equal(financialModeLabel({financialMode:'devnet'}), 'Solana Devnet · Test USDC');
+  assert.equal(financialModeLabel({financialMode:'synthetic'}), 'Synthetic test credits');
+});
+
+test('native payout and refund remain unsettled until close finality is confirmed', () => {
+  const campaign = {...blankDraft(), id:'c', status:'active', settledBaseUnits:'0', refundBaseUnits:'0', payment:{phase:'open'}};
+  assert.equal(nativeSettlementLabel(campaign, 'settledBaseUnits'), 'Not settled');
+  assert.equal(nativeSettlementLabel(campaign, 'refundBaseUnits'), 'Not settled');
+  for (const closeStatus of ['prepared','submitted','unknown']) assert.equal(nativeSettlementLabel({...campaign, status:'settling', payment:{phase:'closing',closeStatus}}, 'refundBaseUnits'), 'Awaiting finality');
+  const finalized = {...campaign, status:'settled', payment:{phase:'finalized',closeStatus:'finalized',settledBaseUnits:'3000',refundBaseUnits:'17000'}};
+  assert.equal(nativeSettlementLabel(finalized, 'settledBaseUnits'), '0.003 Test USDC');
+  assert.equal(nativeSettlementLabel(finalized, 'refundBaseUnits'), '0.017 Test USDC');
+  assert.equal(nativeSettlementLabel({...finalized,payment:{...finalized.payment,settledBaseUnits:'0'}}, 'settledBaseUnits'), '0 Test USDC');
+});

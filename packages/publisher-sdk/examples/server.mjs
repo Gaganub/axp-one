@@ -23,6 +23,7 @@ async function exchangeJSON(path, options = {}) {
 const staticFiles = new Map([
   ['/', ['text/html; charset=utf-8', new URL('./index.html', import.meta.url)]],
   ['/app.mjs', ['text/javascript; charset=utf-8', new URL('./app.mjs', import.meta.url)]],
+  ['/sdk/financial.mjs', ['text/javascript; charset=utf-8', new URL('../financial.mjs', import.meta.url)]],
   ['/sdk/browser.mjs', ['text/javascript; charset=utf-8', new URL('../browser.mjs', import.meta.url)]],
 ]);
 function json(res, status, body) {res.writeHead(status, {'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'}); res.end(JSON.stringify(body));}
@@ -41,7 +42,7 @@ createServer(async (req, res) => {
     }
     if (req.method === 'GET' && path === '/config') {
       const config = await exchangeJSON('/publisher/config');
-      return json(res, 200, {csrf, mode: config.mode, organic: config.organic, engine: config.engine});
+      return json(res, 200, {csrf, mode: config.mode, financialMode: config.financialMode, organic: config.organic, engine: config.engine});
     }
     if (req.method !== 'POST') return json(res, 404, {error: 'not_found'});
     if (req.headers.origin !== origin || req.headers['x-example-csrf'] !== csrf) return json(res, 403, {error: 'app_auth_required'});

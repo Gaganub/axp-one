@@ -26,7 +26,7 @@ remain separate read-only evidence.
    Only then send the observation through the app's backend with the scoped delivery
    token. The backend signs the receipt; browser code has no signing authority.
 6. Inspect accepted receipt, charge and campaign spend. A reservation is not spend;
-   accepted synthetic accrual is not settlement or real money. Rendering proves
+   accepted accrual is distinct from authorization, payout and refund. Rendering proves
    the app's observation, not human attention, conversion or endorsement.
 
 ## Chat user: ask and understand sponsorship
@@ -43,7 +43,7 @@ remain separate read-only evidence.
    Open its HTTPS destination optionally; no click is required for delivery.
 4. See a clear no-fill when inventory, policy, frequency or budget prevents an award.
    Open “Peek inside” to inspect eligibility, observed/inferred evidence, actual buyer engine, decisions, campaign hints,
-   exclusions and deadlines. Real Jev decisions and synthetic financial accounting
+   exclusions and deadlines. Real Jev decisions and the reported financial mode
    are independent labels; one never implies the other.
 5. Continue asking questions in the same session to exercise frequency limits.
    Start a fresh conversation to create a new random session and empty chat history.
@@ -70,7 +70,54 @@ in `/publisher-demo`, inspect the actual Jev decision provenance, award and sepa
 receipt and dashboard accrual. Repeat two fresh turns in the same session to observe
 frequency policy; ask an unrelated question for no-fill. Pause the campaign and
 ask again. Retry one accepted render and confirm its charge ID is unchanged.
-Do not infer payment network activity from this synthetic workflow.
+When using synthetic mode, this workflow uses test credits and does not establish
+payment network activity. Devnet mode is a separate, explicitly selected workspace.
+
+In a Devnet workspace, the advertiser dashboard opens a channel with actual test
+USDC. Peek shows the finalized deposit transaction independently of the auction.
+Accepted delivery creates one charge and the backend authorizes its cumulative
+off-chain voucher. The publisher browser never signs, selects a recipient or sends
+a transfer. Unknown or blocked authorization is shown as accepted but unpaid and
+requiring reconciliation. After the advertiser settles and closes the channel,
+select “Refresh payment records” in Peek to read the finalized payout/close evidence,
+publisher/treasury/payer token deltas, refund, fees and reclaimed rent. This refresh
+does not invoke Jev, DeepSeek or the payment signer. Submitted or uncertain
+transactions do not count as finalized proof. Synthetic workspaces continue to use
+test credits and carry no native transaction claims.
+
+
+The connected acceptance on 2026-10-07 Singapore time (recorded
+`2026-10-06T18:47:01.259Z`) finalized a 20,000-base-unit deposit,
+one 3,000-base-unit accepted/authorized delivery, a 3,000-base-unit publisher payout
+and a 17,000-base-unit refund. A second 200,000-base-unit deposit closed with zero
+charges and a full 200,000-base-unit refund. Both openings and closes were finalized;
+the organic answer used fresh `deepseek-flash` and the buyer used actual Jev.
+Duplicate receipt acknowledgement returned the same charge. These connected results
+are recorded in [the public acceptance artifact](../../artifacts/product/devnet-acceptance.json),
+and are distinct from offline fixture finality or transaction counts.
+`node scripts/product/verify-devnet.mjs` independently reads all four public
+transactions and verifies finalized signatures, channel-program binding, test-USDC
+deltas, network fees and conserved deposits. It uses no wallet, signing or model
+requests. The record also reports receipt identity preserved and no additional
+payments after service restart; its model assertions describe the connected run.
+
+For the clean presentation, start the explicitly configured Devnet product server
+with `AXP_PRODUCT_STATE_DIR=local-state/product-devnet-presentation`,
+`AXP_PRODUCT_FINANCIAL_MODE=devnet`, `AXP_PRODUCT_DEVNET_SIGN=1` and
+`AXP_PRODUCT_DEMO_MODE=1`, then run `npm run demo:prepare-devnet`. Preparation
+funds three finalized channels for ClearVault, KeyArc and ColdNest, with zero model
+calls. The presenter creates HarborKey as advertiser four using editable Tab
+suggestions, then sends the editable chat question with Tab followed by Enter.
+These fictional advertiser identities have real test-USDC channels funded by one
+shared server-held demo sponsor, not independent advertiser wallet custody. The
+original MVP and synthetic workspace stay separate. The publisher SDK example must
+read the key from this selected state directory (or the server's explicit
+`AXP_PUBLISHER_API_KEY` override), never an unrelated workspace key.
+
+Voucher expiry is frozen at 24 hours after preparation, with an earlier signing
+application deadline and settlement margin. Close before that deadline; do not
+reset funded state or silently refresh an expired/uncertain channel identity.
+See [the presentation runbook](PRODUCT_DEMO.md) for exact startup and settlement steps.
 
 ## Research reference
 
@@ -81,4 +128,4 @@ The developer lifecycle is informed by Gravity's official
 [rendering guide](https://docs.trygravity.ai/ai-platforms/show-ads), reviewed
 2026-10-07. These establish the useful parallel server request and native disclosed
 rendering pattern. AXP's API, exact render receipts, explicit retry identities and
-synthetic accounting are its own implementation. No Gravity code or pixel is used.
+financial accounting are its own implementation. No Gravity code or pixel is used.

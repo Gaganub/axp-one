@@ -1,0 +1,22 @@
+"use client";
+import {Ld} from '@axp/design-system/ledger';
+import {devnetTransactionURL, isFinalizedNativeTransaction, type NativePayment} from '../../../../../packages/publisher-sdk/financial.mjs';
+import {money} from './model';
+
+export function NativePaymentEvidence({payment}: {payment?: NativePayment}) {
+  if (!payment || payment.mode !== 'devnet') return null;
+  const network = payment.network === 'solana-devnet';
+  const finalized = (payment.transactions ?? []).filter(tx => network && isFinalizedNativeTransaction(tx));
+  return <div className="pub-native-payment pub-stack">
+    <div className="pub-between"><h4>Native Devnet payment evidence</h4><Ld.Tag tone={payment.reconciliationRequired ? 'warning' : 'outline'}>{payment.reconciliationRequired ? 'Needs reconciliation' : payment.phase || 'State not reported'}</Ld.Tag></div>
+    <p className="ld-caption">{finalized.length} finalized transaction records. Delivery acceptance creates accrued spend; a signed voucher authorizes payment off-chain; payout and refund require a finalized channel transaction.</p>
+    {payment.reason ? <p role="status">{payment.reason}</p> : null}
+    <details className="pub-details"><summary>Channel identity and token</summary><div className="pub-facts">{[['Network', payment.network], ['Channel', payment.channelId], ['Protocol channel', payment.protocolChannelId], ['Channel address', payment.address], ['Payer', payment.payer], ['Publisher payee', payment.payee], ['Test USDC mint', payment.mint], ['Open state', payment.openStatus], ['Close state', payment.closeStatus]].map(([label, value]) => <span key={label} className="pub-payment-fact"><span>{label}</span><b className="ld-mono">{value || 'Not reported'}</b></span>)}</div></details>
+    <div className="pub-vouchers"><h4>Receipt-controlled voucher authorization</h4>{payment.vouchers?.length ? payment.vouchers.map((voucher, i) => <div className="pub-decision" key={`${voucher.chargeId}-${i}`}><div className="pub-between"><b>Voucher {voucher.sequence ?? i + 1}</b><Ld.Tag tone={voucher.status === 'authorized' ? 'success' : 'outline'}>{voucher.status}</Ld.Tag></div><div className="pub-facts"><span>Charge</span><b className="ld-mono">{voucher.chargeId}</b><span>Increment</span><b>{money(voucher.incrementBaseUnits)} test USDC</b><span>Cumulative authorization</span><b>{money(voucher.cumulativeAmountBaseUnits)} test USDC</b></div>{voucher.payloadHash ? <p className="ld-caption ld-mono">Payload hash: {voucher.payloadHash}</p> : null}<p className="ld-caption">Off-chain record. This voucher is not a blockchain payout.</p></div>) : <p>No voucher records reported. An accepted receipt can remain unpaid while authorization is unknown or blocked.</p>}</div>
+    <div className="pub-stack"><h4>Channel transactions</h4>{payment.transactions?.length ? payment.transactions.map((tx, i) => {
+      const complete = network && isFinalizedNativeTransaction(tx);
+      const url = network ? devnetTransactionURL(tx.signature) : undefined;
+      return <div className="pub-decision" key={`${tx.operation}-${i}`}><div className="pub-between"><b>{tx.operation === 'open' ? 'Open and deposit' : 'Payout, close and refund'}</b><Ld.Tag tone={complete ? 'success' : tx.status === 'failed' || tx.status === 'unknown' ? 'warning' : 'outline'}>{complete ? 'Finalized' : tx.status || 'Not reported'}</Ld.Tag></div><p className="ld-caption">{complete ? 'Backend reports a finalized transaction with a bound signature.' : 'This record is not counted as finalized payment proof.'}</p><div className="pub-facts"><span>Network finality</span><b>{tx.finality || 'Not reported'}</b><span>Network fee</span><b>{tx.networkFeeLamports ?? 'Not reported'} lamports</b><span>New account rent</span><b>{tx.newRentLamports ?? 'Not reported'} lamports</b><span>Reclaimed rent</span><b>{tx.reclaimedRentLamports ?? 'Not reported'} lamports</b></div>{complete && tx.tokenDeltas ? <details className="pub-details"><summary>Finalized token balance deltas</summary><pre>{JSON.stringify(tx.tokenDeltas, null, 2)}</pre><p className="ld-caption">Exact base-unit balance changes reported by the payment backend for payer, publisher and treasury.</p></details> : null}{url ? <a href={url} target="_blank" rel="noopener noreferrer">Inspect {complete ? 'finalized' : 'reported'} transaction on Solana Devnet ↗</a> : null}</div>;
+    }) : <p>No native transaction records reported.</p>}</div>
+  </div>;
+}

@@ -117,3 +117,16 @@
 .ad-suggested-caps { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
 @media (max-width: 900px) { .ad-demo-controls { align-items: flex-start; flex-direction: column; gap: 8px; } }
 @media (max-width: 520px) { .ad-step-autofill { flex-direction: column; gap: 12px; } }
+
+.ad-payment-status { margin-bottom: 12px; }
+.ad-payment-identity { overflow-wrap: anywhere; font-size: 12px; }
+.ad-payment-evidence { margin-top: 24px; }
+.ad-payment-evidence ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.ad-payment-evidence li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--ld-border); }
+.ad-payment-evidence li > div { display: grid; gap: 4px; }
+.ad-payment-evidence strong { font-size: 13px; text-transform: capitalize; }
+.ad-payment-evidence a { color: var(--ld-link); font-size: 12px; }
+.ad-transaction-deltas { width: 100%; margin: 4px 0 0; font-size: 11px; color: var(--ld-text-3); }
+.ad-transaction-deltas > div { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 4px 0; }
+.ad-transaction-deltas dt { font-weight: 500; }
+.ad-transaction-deltas dd { margin: 0; overflow-wrap: anywhere; }

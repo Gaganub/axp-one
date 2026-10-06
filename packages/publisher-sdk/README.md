@@ -38,6 +38,12 @@ AXP_EXCHANGE_URL=http://127.0.0.1:3430/api/product \
 ```
 
 This example reads the local publisher key on the server, without printing it.
+Its source is `<selected AXP_PRODUCT_STATE_DIR>/publisher-api-key`, with
+`local-state/product` as the default. Configuration merges ignored `.env.local`
+with process environment overrides. For the funded native presentation workspace,
+select `AXP_PRODUCT_STATE_DIR=local-state/product-devnet-presentation` in both
+product and example configuration. A different workspace key cannot authenticate
+that inventory.
 Alternatively set `AXP_PUBLISHER_API_KEY` in the example's server environment.
 Do not put the key in client code, a public environment variable or an LLM prompt.
 The example's organic path calls the workspace's independent DeepSeek endpoint;
@@ -58,6 +64,7 @@ const axp = new AXPPublisher({
   apiKey: process.env.AXP_PUBLISHER_API_KEY,
   baseURL: process.env.AXP_EXCHANGE_URL,
   timeoutMs: 15000,
+  receiptTimeoutMs: 45000,
 });
 
 // Start both before awaiting either. The answer gets no sponsor material.
@@ -203,6 +210,37 @@ receipt creates accrued spend, cumulative authorization is a separate state, and
 settlement is separate again. `mode: 'synthetic'` means local test credits without
 real funds or blockchain activity. A Devnet label requires actual corresponding
 backend evidence. Jev model execution does not change that financial mode.
+
+Prefer the API's explicit `financialMode` when present, including on an accepted
+receipt. `financialMode: 'devnet'` uses six-decimal **test USDC** amounts on Solana
+Devnet; `financialMode: 'synthetic'` uses local **test credits**. The public
+`@axp/publisher-sdk/financial` helpers resolve this metadata and its denomination
+without supplying payment credentials. An accepted delivery receipt is accrued
+spend; it does not itself prove a finalized payout, channel closure or refund.
+Only the payment backend can create and report those network outcomes. Publisher
+SDK requests never accept a browser-selected recipient, amount or signer.
+
+In Devnet mode, the render response also carries `payment` (the server's channel
+snapshot) and `authorization: {status: 'authorized' | 'unknown' | 'blocked', reason?}`.
+An accepted receipt stays accepted when its automatic voucher authorization is
+unknown or blocked. Retrying that receipt must reuse its award and delivery token;
+it does not create another charge. The payment backend owns reconciliation and
+settlement. Authorization is an off-chain, receipt-controlled cumulative voucher,
+not an on-chain payout.
+
+The chat's budget stage shows the channel, payer, publisher payee, test-USDC mint,
+voucher sequence and amounts, plus recorded open/close transactions. A transaction
+counts as finalized evidence only when both `status` and `finality` are
+`'finalized'` and a valid-shaped signature is present. The UI derives fixed Solana
+Devnet explorer links from that signature; it does not use a supplied arbitrary
+URL. Its “Refresh payment records” button reads the workspace without submitting
+payments or model requests. After the dashboard closes a channel, use it to inspect
+finalized token balance deltas, network fees, reclaimed rent and refunded collateral.
+Synthetic workspaces remain supported and have no native transaction proof.
+
+Ad requests default to a 15-second deadline; delivery acknowledgements use a
+separate 45-second deadline. Configure `timeoutMs` and `receiptTimeoutMs` independently.
+Neither timeout triggers automatic retries or a replacement purchase.
 
 A receipt authenticates an app assertion about exact insertion and disclosure.
 It does not independently prove human viewability, attention, conversion,

@@ -1,3 +1,4 @@
+import {financialModeOf, moneyUnit} from '/sdk/financial.mjs';
 import {createSponsoredCard, createRenderAcknowledger} from '/sdk/browser.mjs';
 const $ = id => document.getElementById(id);
 const randomId = prefix => `${prefix}-${crypto.randomUUID()}`;
@@ -7,7 +8,7 @@ function session() {sessionStorage.setItem('axp-example-session', sessionId); $(
 session();
 function element(tag, text, parent) {const node = document.createElement(tag); node.textContent = text; parent?.append(node); return node;}
 async function post(path, body) {
-  const response = await fetch(path, {method: 'POST', signal: AbortSignal.timeout(40000), headers: {'content-type': 'application/json', 'x-example-csrf': csrf}, body: JSON.stringify(body)});
+  const response = await fetch(path, {method: 'POST', signal: AbortSignal.timeout(path === '/api/render' ? 45000 : 40000), headers: {'content-type': 'application/json', 'x-example-csrf': csrf}, body: JSON.stringify(body)});
   const value = await response.json(); if (!response.ok) throw new Error(value.error || 'request_failed'); return value;
 }
 const acknowledge = createRenderAcknowledger({post: (path, observation, deliveryToken) => {
@@ -39,7 +40,7 @@ $('chat').onsubmit = async event => {
       const node = createSponsoredCard({document, award: ad.award}); sponsor.append(node);
       adStatus.textContent = 'Card inserted. Acknowledging exact copy and Sponsored label.';
       const receipt = await acknowledge({node, award: ad.award, deliveryToken: ad.deliveryToken});
-      adStatus.textContent = `Delivery accepted. ${receipt.charge.amountBaseUnits} ${ad.mode === 'synthetic' ? 'test-credit' : 'test-USDC'} base units accrued. Receipt: ${receipt.charge.id}`;
+      adStatus.textContent = `Delivery accepted. ${receipt.charge.amountBaseUnits} ${moneyUnit(financialModeOf(receipt, ad))} base units accrued. ${receipt.authorization ? `Authorization: ${receipt.authorization.status}. No payout implied. ` : ''}Receipt: ${receipt.charge.id}`;
       trace.textContent = JSON.stringify({mode: ad.mode, trace: ad.trace, receipt}, null, 2);
     } catch (error) {adStatus.textContent = `Ad or delivery path failed: ${error.message}. Organic response is independent.`;}
   })();

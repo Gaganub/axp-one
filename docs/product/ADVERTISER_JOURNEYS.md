@@ -2,8 +2,10 @@
 
 This surface creates and operates new persisted campaigns. The public entry is
 `/advertiser-dashboard`. Ledger v2 supplies the visual language and components.
-The workspace uses synthetic test credits, with no wallet, bank funding or
-blockchain transaction. Actual campaign buying decisions use Jev when configured;
+The backend declares either synthetic test credits or native Solana Devnet payments.
+Synthetic workspaces have no wallet transfer. Native workspaces use Test USDC
+from a shared server-held demo sponsor, with separate advertiser channel identities.
+These channels do not establish external advertiser wallet ownership. Actual campaign buying decisions use Jev when configured;
 provider readiness and provenance are labelled explicitly.
 
 ## First campaign
@@ -22,12 +24,13 @@ provider readiness and provenance are labelled explicitly.
    can be checked against deterministic eligibility and copy rules. Preview does
    not invoke Jev, predict a win or count as delivery. Actual Jev judgment happens
    when a publisher submits an opportunity.
-5. Spend uses decimal test-credit inputs converted exactly to six-decimal integer
+5. Spend uses decimal Test USDC or synthetic test-credit inputs converted exactly to six-decimal integer
    strings. The backend enforces maximum bid, total campaign cap and deposit.
 6. Review summarizes the saved offer, contexts, creative and limits. Launch is an
    explicit action against the saved draft after a review acknowledgement and
    stored creative approval. Editing invalidates approval; launched versions are
-   immutable. An error preserves the editable draft.
+   immutable. Saving and validation errors preserve the draft. A native launch attempt
+   moves to payment status so an uncertain response cannot invite another deposit.
 7. After launch, a clear next action opens the publisher demo, where the campaign
    can compete and a browser can acknowledge insertion. Delivery and spend appear
    only after the backend accepts the corresponding records.
@@ -37,7 +40,7 @@ provider readiness and provenance are labelled explicitly.
 The campaign list offers status/search filters and saved drafts. Open a draft to
 resume the editor. Open an operating campaign to see its actual delivered cards,
 available cap, reserved awards, accepted spend, cumulative authorization,
-synthetic settlement and refund. Reservations are not charges; authorization and
+settlement and refund in the explicit workspace financial mode. Reservations are not charges; authorization and
 settlement do not add spend. Pause stops new competition;
 resume reopens it. Duplicate creates a separate draft. Refresh reconciles server
 state without inventing progress. The account can be edited separately.
@@ -50,7 +53,7 @@ remain visible and do not claim success. Busy controls prevent repeat submission
 A saved draft is distinguished from unsaved changes. Empty delivery tables explain
 how to create a real event using the publisher demo. Delivery means card insertion,
 not attention, impressions, clicks or conversions. No chart or effectiveness metric
-is fabricated. Money labels consistently identify synthetic test credits.
+is fabricated. Money labels consistently identify Test USDC on Solana Devnet or synthetic test credits.
 
 ## Interaction and layout
 
@@ -95,3 +98,47 @@ and launches its first campaign; the UI never manufactures a fourth saved record
 The publisher SDK is available for technical review. It is outside this presentation
 journey. Seeded inventory and keyboard suggestions do not modify the original MVP
 recordings or campaign identity.
+
+## Native Devnet channel journey
+
+The backend payment readiness gate is independent of Jev and DeepSeek readiness.
+Drafts remain saveable when payments are unavailable. Native review names the exact
+channel deposit and acknowledges the shared demo sponsor before **Fund channel &
+launch**. The campaign stays **Opening channel** until opening is finalized; it
+competes only after the backend marks it active. A busy state describes the request
+without fabricating transaction stages. Confirmation can take 20–45 seconds.
+
+The detail view shows the confirmed deposit, available campaign cap, reserved awards,
+accepted charges, cumulative authorized total, confirmed publisher payout and
+returned deposit separately. Deposit is collateral. Accepted charges count once;
+authorization and settlement do not add spend. SOL fees and rent are separate.
+
+Native opening and closing transactions expose sanitized signatures, finality,
+network fees, new/reclaimed rent and available token deltas. Explorer links are
+pinned to Solana Devnet. The cumulative voucher list connects saved charge
+sequences with exact increments and totals; no signing payload is exposed.
+
+Accepted receipts automatically attempt exact-ledger authorization. If an accepted
+charge remains above the authorized total, **Authorize accepted deliveries** can
+advance the durable ledger without taking a user-supplied amount. Pending or
+uncertain operations disable advancing actions. **Reconcile status** looks up the
+saved operation; it does not replace a channel, sign a fresh deposit or purchase
+another delivery.
+
+**Close & settle Test USDC** is available only when the backend allows it. It drains
+new awards and pending deliveries, closes with the saved final voucher, pays the
+publisher and returns the unused deposit. **Settlement pending** remains visible
+until finalized evidence exists. Zero charges yield a zero publisher payout and
+an unused-deposit return, rather than a fabricated charged delivery. Uncertain
+close/refund results remain unresolved until reconciled.
+
+Pause and resume reuse the same funded channel and immutable native campaign
+version. Duplicating creates an unapproved draft with a separate future channel.
+Do not reset a funded presentation workspace as part of keyboard rehearsal; first
+inspect and settle its channels through the coordinated payment workflow.
+
+An unsigned opening blocker retains the same saved campaign. **Retry saved channel
+opening** is explicit and refetches current state before `/launch`. It appears only
+for a pre-freeze opening with no native payment record or a backend-approved
+prepared opening without a signed identity. Signed, submitted, uncertain and
+finalized identities never receive this retry action; their recovery uses lookup.

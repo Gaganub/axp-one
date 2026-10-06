@@ -40,5 +40,5 @@ if(process.argv[1]&&resolve(process.argv[1])===resolve(import.meta.filename)) {
     console.log(JSON.stringify({previousDemoPreservedAt:backup}));
   }
   console.log(JSON.stringify(prepareDemo(),null,2));
-  console.log('Start with: AXP_PRODUCT_DEMO_MODE=1 AXP_PRODUCT_STATE_DIR=local-state/product-presentation npm run demo:product');
+  console.log('Start with: AXP_PRODUCT_FINANCIAL_MODE=synthetic AXP_PRODUCT_DEVNET_SIGN=0 AXP_PRODUCT_DEMO_MODE=1 AXP_PRODUCT_STATE_DIR=local-state/product-presentation npm run demo:product');
 }

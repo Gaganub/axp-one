@@ -53,20 +53,21 @@ function validateOpportunityResult(value) {
 }
 
 export class AXPPublisher {
-  #key; #baseURL; #fetch; #timeout;
-  constructor({apiKey, baseURL = 'http://127.0.0.1:3430/api/product', timeoutMs = 15000, fetch: fetchImpl = globalThis.fetch} = {}) {
+  #key; #baseURL; #fetch; #timeout; #receiptTimeout;
+  constructor({apiKey, baseURL = 'http://127.0.0.1:3430/api/product', timeoutMs = 15000, receiptTimeoutMs = 45000, fetch: fetchImpl = globalThis.fetch} = {}) {
     if (typeof window !== 'undefined') throw new PublisherSDKError('server_only');
     requireString(apiKey, 'publisher_key_required');
     if (/[\r\n]/.test(apiKey)) throw new PublisherSDKError('invalid_publisher_key');
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120000) throw new PublisherSDKError('invalid_timeout');
+    if (!Number.isSafeInteger(receiptTimeoutMs) || receiptTimeoutMs < 1 || receiptTimeoutMs > 120000) throw new PublisherSDKError('invalid_receipt_timeout');
     if (typeof fetchImpl !== 'function') throw new PublisherSDKError('fetch_required');
-    this.#key = apiKey; this.#baseURL = endpoint(baseURL); this.#fetch = fetchImpl; this.#timeout = timeoutMs;
+    this.#key = apiKey; this.#baseURL = endpoint(baseURL); this.#fetch = fetchImpl; this.#timeout = timeoutMs; this.#receiptTimeout = receiptTimeoutMs;
   }
-  async #request(path, body, deliveryToken) {
+  async #request(path, body, deliveryToken, timeoutMs = this.#timeout) {
     const controller = new AbortController();
     let timeout;
     const deadline = new Promise((_, reject) => {
-      timeout = setTimeout(() => { controller.abort(); reject(new PublisherSDKError('timeout')); }, this.#timeout);
+      timeout = setTimeout(() => { controller.abort(); reject(new PublisherSDKError('timeout')); }, timeoutMs);
     });
     try {
       return await Promise.race([deadline, (async () => {
@@ -96,7 +97,7 @@ export class AXPPublisher {
       typeof observation.creativeHash !== 'string' || !observation.creativeHash) throw new PublisherSDKError('render_not_observed');
     const result = await this.#request(`/awards/${encodeURIComponent(awardId)}/render`, {
       creativeHash: observation.creativeHash, domInserted: true, sponsoredLabelPresent: true,
-    }, deliveryToken);
+    }, deliveryToken, this.#receiptTimeout);
     if (result?.status !== 'accepted' || typeof result.charge?.id !== 'string' ||
       typeof result.charge?.amountBaseUnits !== 'string' || !/^(0|[1-9][0-9]*)$/.test(result.charge.amountBaseUnits) ||
       !/^[a-f0-9]{64}$/.test(result.receiptHash) || !result.receipt || typeof result.signature !== 'string' ||
