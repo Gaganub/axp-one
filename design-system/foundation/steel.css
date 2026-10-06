@@ -1,0 +1,148 @@
+/* STEEL: the shared axp.one foundation (ultramarine identity). Tokens, base, provenance marks and money states.
+   Both Prospectus (landing) and Ledger (product) import this first. Fonts: foundation/fonts.css (opt-in). Spec: docs/frontend/DESIGN_SYSTEMS.md */
+
+
+:root {
+  color-scheme: light;
+
+  /* ULTRAMARINE identity (owner, 2026-10-02). Warm paper, blue-black ink, ONE electric ultramarine.
+     Ultramarine is used like ContextHint uses its vermillion: big, bold, only where the story peaks
+     (the winning bid, the route, the Sponsored frame, key numbers, the primary action, the wordmark dot). */
+  --brand: #2b3bff;            /* electric ultramarine: fills, rules, large type */
+  --brand-deep: #1a26cf;       /* hover / pressed, text-on-paper at small sizes */
+  --brand-ink: #0b1470;        /* ultramarine darkened for long text emphasis */
+  --brand-wash: #e7e9ff;       /* tint fills, selected rows */
+  --brand-line: #b9c0ff;       /* hairlines in brand */
+  --on-brand: #ffffff;
+  --brand-hatch: repeating-linear-gradient(135deg, var(--brand) 0 1.5px, transparent 1.5px 6px);
+
+  /* Neutrals: warm paper, ink biased toward the brand's blue */
+  --paper: #f4f2ec;
+  --paper-2: #ecebe4;
+  --white: #fbfaf6;
+  --ink: #0e1220;
+  --muted: #4c5266;
+  --steel: #5a6178;            /* legacy name: cool secondary neutral (labels, quiet marks) */
+  --steel-dark: #2f3550;       /* legacy name: strong secondary neutral */
+  --silver: #c3c6d2;
+  --line: #c9cad3;
+  --line-soft: #e0e0e7;
+  --mist: #e9e9ef;
+  --focus: #2b3bff;
+
+  /* The one dark stage: deep ultramarine night, not grey */
+  --stage: #0a0e2a;
+  --stage-2: #111743;
+  --stage-3: #19205a;
+  --stage-line: #3a4385;
+  --stage-line-soft: #232a62;
+  --stage-ink: #eef0ff;
+  --stage-muted: #9aa2d9;
+  --stage-steel: #aeb5e6;      /* legacy name: secondary marks on stage */
+  --stage-brand: #6573ff;      /* ultramarine lifted for contrast on the stage */
+
+  /* ContextHint's own colour: only in the ContextHint section and where its evidence enters AXP */
+  --contexthint: #f65a20;
+  --contexthint-wash: #ffe4d6;
+  --contexthint-ink: #c2410c;  /* ContextHint vermillion for text under 24px (AA on paper) */
+
+  /* Type families: PolySans only */
+  --font-body: "PolySans", system-ui, sans-serif;
+  --font-display: "PolySans Wide", "PolySans", system-ui, sans-serif;
+  --font-mono: "PolySans Mono", ui-monospace, monospace;
+
+  /* Spacing ladder */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-30: 120px;
+
+  /* Layout */
+  --gutter: clamp(20px, 5.5vw, 88px);
+  --section-y: clamp(88px, 11vw, 160px);
+  --wide: 1520px;
+  --content: 1320px;
+  --prose: 64ch;
+
+  /* Shape and depth: square by default, flat hard offset shadows only */
+  --radius-0: 0px;
+  --radius-s: 4px;
+  --shadow-offset: 9px 9px 0 #d0d5d5;
+  --shadow-offset-s: 5px 5px 0 #d0d5d5;
+  --shadow-stage: 9px 9px 0 #12171a;
+
+  /* Motion: one curve family */
+  --ease: cubic-bezier(.2, .75, .25, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-std: cubic-bezier(.4, 0, .2, 1);
+  --d-micro: 120ms;
+  --d-ui: 220ms;
+  --d-move: 420ms;
+  --d-beat: 720ms;
+
+  /* Hatch patterns for money states and inferred marks (pattern carries meaning, not colour) */
+  --hatch-steel: repeating-linear-gradient(135deg, var(--steel) 0 1.5px, transparent 1.5px 6px);
+  --hatch-silver: repeating-linear-gradient(135deg, var(--silver) 0 1.5px, transparent 1.5px 6px);
+  --dash-line: repeating-linear-gradient(90deg, var(--steel) 0 6px, transparent 6px 11px);
+  --route-line: repeating-linear-gradient(90deg, var(--brand) 0 10px, transparent 10px 18px);
+
+  /* Legacy aliases kept for apps/v3-ui (design-system/tokens.css users) */
+  --dark: var(--stage);
+  --dark-line: var(--stage-line);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 18px; line-height: 1.52; }
+img, svg, video { display: block; max-width: 100%; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+em { font-style: normal; color: var(--brand-deep); }
+i { font-style: normal; }
+::selection { background: var(--brand); color: var(--on-brand); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.steel-data, code, kbd, samp { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.steel-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+
+/* ---------- Provenance marks ----------
+   <span class="pv" data-kind="actual"><i class="pv-glyph"></i><span class="pv-word">Actual output</span></span>
+   Shape carries meaning so it survives print, video compression and colour blindness. */
+.pv { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-body); font-weight: 500; font-size: 13px; line-height: 1; letter-spacing: .02em; color: var(--steel-dark); white-space: nowrap; }
+.pv-glyph { position: relative; flex: none; width: 9px; height: 9px; display: inline-block; }
+.pv[data-kind="actual"] .pv-glyph { background: currentColor; }
+.pv[data-kind="observed"] .pv-glyph { background: currentColor; border-radius: 50%; }
+.pv[data-kind="inferred"] .pv-glyph { border: 1.5px solid currentColor; border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); }
+.pv[data-kind="fictional"] .pv-glyph { border: 1.5px solid currentColor; }
+.pv[data-kind="policy"] .pv-glyph { width: 8px; height: 8px; margin: 0 .5px; background: currentColor; transform: rotate(45deg); }
+.pv[data-kind="settled"] .pv-glyph { width: 13px; height: 5px; background: currentColor; }
+.pv[data-kind="synthetic"] .pv-glyph { border: 1.5px dashed currentColor; }
+.pv[data-kind="replay"] .pv-glyph { border: 1.5px solid currentColor; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--pv-bg, var(--paper)), inset 0 0 0 9px currentColor; }
+.pv[data-kind="illustrative"] .pv-glyph { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid currentColor; }
+.pv[data-kind="illustrative"] .pv-glyph::after { content: ""; position: absolute; left: -2.5px; top: 3.5px; border-left: 2.5px solid transparent; border-right: 2.5px solid transparent; border-bottom: 4px solid var(--pv-bg, var(--paper)); }
+.pv[data-kind="vision"] .pv-glyph { border: 1.5px dotted currentColor; border-radius: 50%; }
+.pv-quiet .pv-word { color: var(--muted); font-weight: 400; }
+.on-stage .pv, .pv.on-stage { color: var(--stage-steel); --pv-bg: var(--stage); }
+
+/* ---------- Money states ---------- */
+.ms { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; line-height: 1; color: var(--ink); }
+.ms-swatch { width: 18px; height: 10px; flex: none; }
+.ms[data-state="deposit"] .ms-swatch { border: 1.5px solid var(--ink); }
+.ms[data-state="reserved"] .ms-swatch { border: 1.5px dashed var(--brand); }
+.ms[data-state="accepted"] .ms-swatch { background: var(--brand-hatch); border: 1px solid var(--brand); }
+.ms[data-state="authorized"] .ms-swatch { background: var(--brand); }
+.ms[data-state="settled"] .ms-swatch { background: var(--ink); }
+.ms[data-state="refunded"] .ms-swatch { border: 1.5px solid var(--ink); background: var(--white); }
+.ms[data-state="pending"] .ms-swatch,
+.ms[data-state="unknown"] .ms-swatch { border: 1.5px dotted var(--steel); }

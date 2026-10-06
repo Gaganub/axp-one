@@ -1,0 +1,457 @@
+{
+  "projectionVersion": "axp.product-run.v1",
+  "generatedFrom": {
+    "artifacts/v3-devnet-live-rehearsal/replay/run.json": "b4b866cf4c2589d67d1342ff111968b28f7523acff382cd7efb1beab855c6959",
+    "artifacts/v3-devnet-live-rehearsal/replay/manifest.json": "bfac185a2b6ece9c469b8dc9a5529c58a0db78262dbebf7e9d59019c360676be"
+  },
+  "output": {
+    "path": "public/run.public.json",
+    "bytes": 180909,
+    "sha256": "85b0ceabfc37ecee2ff33399b30759326bce587a220cf8aa72c7461ac201ffa5"
+  },
+  "counts": {
+    "opportunities": 4,
+    "decisions": 15,
+    "auctions": 3,
+    "noFill": 1,
+    "receipts": 3,
+    "events": 33,
+    "channels": 2,
+    "txs": 4,
+    "inputTokens": 21346,
+    "outputTokens": 1655,
+    "evidenceRecords": 13,
+    "evidenceHints": 5
+  },
+  "sanitization": {
+    "removed": [
+      {
+        "field": "events: organic agentId",
+        "count": 4
+      },
+      {
+        "field": "events: buyer_decision agentRunId, engine provenance, conversion field",
+        "count": 5
+      },
+      {
+        "field": "decisions: packetBytes",
+        "count": 15
+      },
+      {
+        "field": "decisions: request (kept requestHash)",
+        "count": 15
+      },
+      {
+        "field": "decisions: agentRunId",
+        "count": 15
+      },
+      {
+        "field": "decisions: conversion-probability field",
+        "count": 15
+      },
+      {
+        "field": "decisions: rawOutput (kept scores, probabilities, rawOutputHash)",
+        "count": 15
+      },
+      {
+        "field": "decisions: query vector ids",
+        "count": 2
+      },
+      {
+        "field": "organic: agentId",
+        "count": 4
+      },
+      {
+        "field": "evidence: full catalogue records",
+        "count": 1165
+      },
+      {
+        "field": "evidence: full catalogue hints",
+        "count": 326
+      },
+      {
+        "field": "top-level retrieval duplicate",
+        "count": 6
+      },
+      {
+        "field": "top-level callEvidence",
+        "count": 15
+      },
+      {
+        "field": "channels: rpc url, settlementLink, openSalt",
+        "count": 2
+      },
+      {
+        "field": "chain: absolute balances (pre/post lamports, token balances, postSnapshot)",
+        "count": 4
+      },
+      {
+        "field": "laboratory (synthetic, never acceptance)",
+        "count": 1
+      },
+      {
+        "field": "freeze.drafts and freeze.manifest duplicates",
+        "count": 2
+      }
+    ],
+    "forbiddenStringsScanned": [
+      "surfnet",
+      "customUrl",
+      "openSalt",
+      "\"agentId\"",
+      "agentRunId",
+      "packetBytes",
+      "PRIVATE KEY",
+      "\"rpc\"",
+      ":8899",
+      "conversionProbability",
+      "sandbox-topup"
+    ],
+    "vectorGuard": "no numeric array longer than 64"
+  },
+  "selfChecks": [
+    {
+      "name": "manifest records the run.json hash",
+      "ok": true,
+      "detail": "b4b866cf4c2589d67d1342ff111968b28f7523acff382cd7efb1beab855c6959 vs b4b866cf4c2589d67d1342ff111968b28f7523acff382cd7efb1beab855c6959"
+    },
+    {
+      "name": "manifest run id = run id",
+      "ok": true,
+      "detail": "v3-devnet-live-rehearsal-20261002 vs v3-devnet-live-rehearsal-20261002"
+    },
+    {
+      "name": "manifest financial mode = run financial mode",
+      "ok": true,
+      "detail": "devnet vs devnet"
+    },
+    {
+      "name": "bid v3-cached/v3-clearvault = computeBid(3:3)",
+      "ok": true,
+      "detail": "4000 vs 4000"
+    },
+    {
+      "name": "bid v3-cached/v3-clearvault policy version",
+      "ok": true
+    },
+    {
+      "name": "bid v3-cached/v3-keyforge = computeBid(3:2)",
+      "ok": true,
+      "detail": "3000 vs 3000"
+    },
+    {
+      "name": "bid v3-cached/v3-keyforge policy version",
+      "ok": true
+    },
+    {
+      "name": "auction v3-cached winner by rank",
+      "ok": true
+    },
+    {
+      "name": "bid v3-offline/v3-clearvault = computeBid(3:2)",
+      "ok": true,
+      "detail": "3000 vs 3000"
+    },
+    {
+      "name": "bid v3-offline/v3-clearvault policy version",
+      "ok": true
+    },
+    {
+      "name": "bid v3-offline/v3-keyforge = computeBid(3:2)",
+      "ok": true,
+      "detail": "3000 vs 3000"
+    },
+    {
+      "name": "bid v3-offline/v3-keyforge policy version",
+      "ok": true
+    },
+    {
+      "name": "auction v3-offline winner by rank",
+      "ok": true
+    },
+    {
+      "name": "bid v3-repeat/v3-keyforge = computeBid(3:3)",
+      "ok": true,
+      "detail": "4000 vs 4000"
+    },
+    {
+      "name": "bid v3-repeat/v3-keyforge policy version",
+      "ok": true
+    },
+    {
+      "name": "auction v3-repeat winner by rank",
+      "ok": true
+    },
+    {
+      "name": "one network for every channel",
+      "ok": true,
+      "detail": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+    },
+    {
+      "name": "chain-check v3-clearvault-channel: signatures match the run",
+      "ok": true
+    },
+    {
+      "name": "chain-check v3-clearvault-channel: explorer links on devnet",
+      "ok": true
+    },
+    {
+      "name": "chain-check v3-keyforge-channel: signatures match the run",
+      "ok": true
+    },
+    {
+      "name": "chain-check v3-keyforge-channel: explorer links on devnet",
+      "ok": true
+    },
+    {
+      "name": "chain-check funding link on devnet",
+      "ok": true
+    },
+    {
+      "name": "count: at least one opportunity",
+      "ok": true,
+      "detail": "4"
+    },
+    {
+      "name": "count: decisions = sum of per-opportunity decisions",
+      "ok": true
+    },
+    {
+      "name": "count: auctions + no-fills = opportunities",
+      "ok": true,
+      "detail": "3 + 1 vs 4"
+    },
+    {
+      "name": "count: receipts = awards = charges",
+      "ok": true
+    },
+    {
+      "name": "count: vouchers = charges",
+      "ok": true
+    },
+    {
+      "name": "count: 2 chain transactions per funded channel",
+      "ok": true,
+      "detail": "4 vs 2 x 2"
+    },
+    {
+      "name": "manifest: model completed calls = decisions",
+      "ok": true,
+      "detail": "15/15 vs 15"
+    },
+    {
+      "name": "manifest: no failed or uncertain calls",
+      "ok": true
+    },
+    {
+      "name": "manifest: signed receipts = receipts",
+      "ok": true,
+      "detail": "3 vs 3"
+    },
+    {
+      "name": "manifest: events = projected events",
+      "ok": true
+    },
+    {
+      "name": "manifest: run id agrees",
+      "ok": true
+    },
+    {
+      "name": "manifest: chain evidence fees = transactions",
+      "ok": true,
+      "detail": "40000 vs 40000"
+    },
+    {
+      "name": "manifest: chain evidence gross fee and rent = transactions",
+      "ok": true
+    },
+    {
+      "name": "manifest: chain evidence reports all checks passed",
+      "ok": true
+    },
+    {
+      "name": "manifest: paid deliveries within the frozen limit",
+      "ok": true
+    },
+    {
+      "name": "evidence: every referenced record and hint is present",
+      "ok": true
+    },
+    {
+      "name": "story order: questionIndex 0..n-1",
+      "ok": true
+    },
+    {
+      "name": "events sorted by seq",
+      "ok": true
+    },
+    {
+      "name": "chain txs sorted by slot",
+      "ok": true
+    },
+    {
+      "name": "charges sum to the total",
+      "ok": true
+    },
+    {
+      "name": "running totals accumulate charges in story order",
+      "ok": true
+    },
+    {
+      "name": "conservation v3-clearvault: settled + refund = deposit",
+      "ok": true
+    },
+    {
+      "name": "conservation v3-clearvault: close deltas = settled, refund",
+      "ok": true
+    },
+    {
+      "name": "conservation v3-clearvault: open delta = -deposit",
+      "ok": true
+    },
+    {
+      "name": "settled = last voucher v3-clearvault",
+      "ok": true
+    },
+    {
+      "name": "vouchers are cumulative v3-clearvault",
+      "ok": true
+    },
+    {
+      "name": "conservation v3-keyforge: settled + refund = deposit",
+      "ok": true
+    },
+    {
+      "name": "conservation v3-keyforge: close deltas = settled, refund",
+      "ok": true
+    },
+    {
+      "name": "conservation v3-keyforge: open delta = -deposit",
+      "ok": true
+    },
+    {
+      "name": "settled = last voucher v3-keyforge",
+      "ok": true
+    },
+    {
+      "name": "vouchers are cumulative v3-keyforge",
+      "ok": true
+    },
+    {
+      "name": "payout + refund = deposits",
+      "ok": true
+    },
+    {
+      "name": "payouts = accepted charges",
+      "ok": true
+    },
+    {
+      "name": "fee + new rent within cap",
+      "ok": true,
+      "detail": "8406760 <= 20000000"
+    },
+    {
+      "name": "receipts joined by awardId",
+      "ok": true
+    },
+    {
+      "name": "no decision exposes a conversion field",
+      "ok": true
+    },
+    {
+      "name": "not-admitted bidders never appear among bids",
+      "ok": true
+    },
+    {
+      "name": "no-fill opportunities have no award, receipt or charge",
+      "ok": true
+    },
+    {
+      "name": "winner is the top-ranked bid",
+      "ok": true
+    },
+    {
+      "name": "sanitization: no forbidden strings",
+      "ok": true
+    },
+    {
+      "name": "vector guard: no numeric array longer than 64",
+      "ok": true
+    },
+    {
+      "name": "size budget <= 300KB",
+      "ok": true,
+      "detail": "180909 bytes"
+    },
+    {
+      "name": "verify checks pass (47)",
+      "ok": true
+    },
+    {
+      "name": "verify produces exactly the checks the run's structure implies (47)",
+      "ok": true,
+      "detail": "47"
+    }
+  ],
+  "verify": {
+    "total": 47,
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0,
+    "ids": [
+      "question-1",
+      "question-2",
+      "question-3",
+      "question-4",
+      "packet-v3-cached:v3-clearvault-340ab5741a56:text_only",
+      "packet-v3-cached:v3-clearvault-340ab5741a56:history",
+      "packet-v3-cached:v3-keyforge-ff58994594a9:text_only",
+      "packet-v3-cached:v3-keyforge-ff58994594a9:history",
+      "packet-v3-cached:v3-leatherguard-60be7f7369e8:text_only",
+      "packet-v3-cached:v3-leatherguard-60be7f7369e8:history",
+      "packet-v3-offline:v3-clearvault-340ab5741a56:text_only",
+      "packet-v3-offline:v3-clearvault-340ab5741a56:history",
+      "packet-v3-offline:v3-keyforge-ff58994594a9:text_only",
+      "packet-v3-offline:v3-keyforge-ff58994594a9:history",
+      "packet-v3-offline:v3-leatherguard-60be7f7369e8:text_only",
+      "packet-v3-offline:v3-leatherguard-60be7f7369e8:history",
+      "packet-v3-repeat:v3-clearvault-340ab5741a56:history",
+      "packet-v3-repeat:v3-keyforge-ff58994594a9:history",
+      "packet-v3-repeat:v3-leatherguard-60be7f7369e8:history",
+      "creative-1",
+      "creative-2",
+      "creative-3",
+      "ack-1",
+      "ack-2",
+      "ack-3",
+      "receipt-1",
+      "receipt-2",
+      "receipt-3",
+      "signature-1",
+      "signature-2",
+      "signature-3",
+      "linkage-1",
+      "linkage-2",
+      "linkage-3",
+      "cumulative-v3-clearvault-1",
+      "cumulative-v3-clearvault-2",
+      "cumulative-v3-keyforge-1",
+      "conservation-v3-clearvault",
+      "conservation-v3-keyforge",
+      "bid-1-v3-clearvault",
+      "bid-1-v3-keyforge",
+      "bid-2-v3-clearvault",
+      "bid-2-v3-keyforge",
+      "bid-3-v3-keyforge",
+      "tiebreak-2",
+      "feecap",
+      "totals"
+    ],
+    "byMethod": {
+      "recomputed": 28,
+      "signature": 3,
+      "arithmetic": 10,
+      "policy": 6
+    }
+  }
+}

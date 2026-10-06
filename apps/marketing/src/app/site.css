@@ -1,0 +1,27 @@
+/* Page composition for the axp.one landing page (v7). Sections style themselves (src/v7/*.module.css);
+   primitives live in Prospectus. */
+.pg-main { padding-top: 0; }
+
+/* Film mode: no cursor, no hover states, for a repeatable recording. */
+html[data-px-film] *, html[data-px-film] *::before { cursor: none !important; }
+html[data-px-film] .nextjs-portal, html[data-px-film] nextjs-portal { display: none !important; }
+
+/* Video poster frame (1400 x 1352), rendered once by the headless capture (noindex /poster). */
+.poster { width: 1400px; height: 1352px; display: grid; grid-template-rows: auto auto auto 1fr; gap: 28px; padding: 96px 110px; background: var(--brand); color: var(--on-brand); overflow: hidden; }
+.poster-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; }
+.poster-mark { font-family: var(--font-display); font-weight: 500; font-size: 44px; letter-spacing: -.03em; }
+.poster-mark .px-mark-dot { color: var(--ink); }
+.poster-k { font-weight: 500; }
+.poster-h { margin: 40px 0 0; font-family: var(--font-display); font-weight: 300; font-size: 170px; line-height: .9; letter-spacing: -.05em; }
+.poster-sub { margin: 0; max-width: 32ch; font-size: 30px; line-height: 1.35; color: rgba(255, 255, 255, .86); }
+.poster-chat { align-self: end; max-width: 860px; transform: scale(1.12); transform-origin: 0 100%; }
+.poster-chat .sp-chat { border-radius: var(--px-r-xl); box-shadow: 0 30px 80px -30px rgba(10, 14, 42, .7); }
+
+/* v7 one continuous story: once the tone layer runs (src/v7/Tone.tsx), sections drop their own
+   backgrounds and the single fixed layer carries the colour, blending across every seam. */
+html[data-px-tone="on"] body, html[data-px-tone="on"] [data-world] { background: transparent !important; }
+html[data-px-tone="on"] [data-world] .px-footer { background: transparent; border-top-color: transparent; }
+/* Copy that sits straight on the tone layer fades while the colour behind it cannot carry it
+   (--tone-o is set per world by Tone.tsx from the live contrast), so no headline crosses a seam
+   on the wrong colour. Without JS or the layer, --tone-o is unset and the copy is fully shown. */
+html[data-px-tone="on"] [data-tone-text] { opacity: var(--tone-o, 1); transition: opacity 160ms linear; }

@@ -1,0 +1,36 @@
+{
+  "cluster": "devnet",
+  "live": true,
+  "programUrl": "https://explorer.solana.com/address/CHNLxYvVA28MJP9PrFuDXccuoGXAx7jBacfLEkahyGsX?cluster=devnet",
+  "mintUrl": "https://explorer.solana.com/address/4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU?cluster=devnet",
+  "receipts": 3,
+  "channels": [
+    {
+      "campaign": "v3-clearvault",
+      "name": "ClearVault",
+      "deposit": "20000",
+      "paid": "7000",
+      "refunded": "13000",
+      "vouchers": [
+        "4000",
+        "7000"
+      ],
+      "channelUrl": "https://explorer.solana.com/address/G9wtRR7RBPYWT5HgfvU3gWZbXhd3F9EgGKeLEKKeEjsY?cluster=devnet",
+      "openUrl": "https://explorer.solana.com/tx/41vPwWcKmWpegmx6j9LZAow65RBs3anazJngismUyXXAdAnZ35i9FRWHRJFVEgD9ECm88gXZyAbx13x6kXxsWjcr?cluster=devnet",
+      "closeUrl": "https://explorer.solana.com/tx/5GeYRidtqb5q2AkziUF5dxBC7zRmrkjuAQj8BrwV9mJriueC2f2Ki8Axv1VcgziDUY8Jmg1LWnFmrLRN2zsPmDzm?cluster=devnet"
+    },
+    {
+      "campaign": "v3-keyforge",
+      "name": "KeyForge",
+      "deposit": "20000",
+      "paid": "4000",
+      "refunded": "16000",
+      "vouchers": [
+        "4000"
+      ],
+      "channelUrl": "https://explorer.solana.com/address/FGG7y5AQ94Qq8CbiVDe7Ua8RpAySQmjkoHJ9DD2Xv1Wj?cluster=devnet",
+      "openUrl": "https://explorer.solana.com/tx/tK1qDyHZWqyFr3BhcynYomB2XFRnCnRcwGfByio7DHG1FbDYpeZHaVGu9e1CpNbmRizbGN47tN8Z926GbWymH2E?cluster=devnet",
+      "closeUrl": "https://explorer.solana.com/tx/3kUvLYGdns7FQ82583KXpP7xW675egDrtKkbcCedUgheASMRFgs5FCifhBWQDH6Lqbi3pxxyCAeaVNVQ9oLJ6ckj?cluster=devnet"
+    }
+  ]
+}
